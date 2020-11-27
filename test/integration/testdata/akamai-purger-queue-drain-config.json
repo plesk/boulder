@@ -22,8 +22,8 @@
         }
     },
     "syslog": {
-      "stdoutlevel": 6,
-      "sysloglevel": 6
+      "stdoutlevel": 4,
+      "sysloglevel": 4
     },
     "common": {
       "issuerCert": "/tmp/intermediate-cert-rsa-a.pem"
