@@ -14,6 +14,6 @@
     "sqlDebug": true
   },
   "syslog": {
-    "stdoutlevel": 6
+    "stdoutlevel": 4
   }
 }
