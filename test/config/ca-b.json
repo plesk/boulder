@@ -152,6 +152,6 @@
 
   "syslog": {
     "stdoutlevel": 6,
-    "sysloglevel": 6
+    "sysloglevel": 4
   }
 }
