@@ -53,8 +53,8 @@
   },
 
   "syslog": {
-    "stdoutlevel": 4,
-    "sysloglevel": 6
+    "stdoutlevel": 1,
+    "sysloglevel": 1
   },
 
   "common": {
