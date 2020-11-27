@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -23,6 +24,7 @@ import (
 	"github.com/letsencrypt/boulder/goodkey"
 	bgrpc "github.com/letsencrypt/boulder/grpc"
 	"github.com/letsencrypt/boulder/identifier"
+	"github.com/letsencrypt/boulder/issuance"
 	blog "github.com/letsencrypt/boulder/log"
 	"github.com/letsencrypt/boulder/metrics/measured_http"
 	"github.com/letsencrypt/boulder/nonce"
@@ -44,6 +46,7 @@ const (
 	directoryPath = "/directory"
 	newAcctPath   = "/acme/new-acct"
 	acctPath      = "/acme/acct/"
+	caRootPath    = "/ca-root"
 	// When we moved to authzv2, we used a "-v3" suffix to avoid confusion
 	// regarding ACMEv2.
 	authzPath         = "/acme/authz-v3/"
@@ -76,8 +79,8 @@ type WebFrontEndImpl struct {
 	clk   clock.Clock
 	stats wfe2Stats
 
-	// Issuer certificate (DER) for /acme/issuer-cert
-	IssuerCert []byte
+	// Issuer certificate for /acme/issuer-cert
+	IssuerCert *issuance.Certificate
 
 	// certificateChains maps AIA issuer URLs to a slice of []byte containing a leading
 	// newline and one or more PEM encoded certificates separated by a newline,
@@ -371,6 +374,7 @@ func (wfe *WebFrontEndImpl) Handler(stats prometheus.Registerer) http.Handler {
 	// GETable and POST-as-GETable ACME endpoints
 	wfe.HandleFunc(m, directoryPath, wfe.Directory, "GET", "POST")
 	wfe.HandleFunc(m, newNoncePath, wfe.Nonce, "GET", "POST")
+	wfe.HandleFunc(m, caRootPath, wfe.CARoot, "GET")
 	// POST-as-GETable ACME endpoints
 	// TODO(@cpu): After November 1st, 2020 support for "GET" to the following
 	// endpoints will be removed, leaving only POST-as-GET support.
@@ -431,6 +435,24 @@ func addRequesterHeader(w http.ResponseWriter, requester int64) {
 	if requester > 0 {
 		w.Header().Set("Boulder-Requester", strconv.FormatInt(requester, 10))
 	}
+}
+
+// CARoot returns Root CA content
+func (wfe *WebFrontEndImpl) CARoot(
+	ctx context.Context,
+	logEvent *web.RequestEvent,
+	response http.ResponseWriter,
+	request *http.Request) {
+	filePath := "/tmp/root-cert-rsa.pem"
+	caRoot, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		prob := probs.ServerInternal(fmt.Sprintf("could not get root ca: %v", err))
+		wfe.sendError(response, logEvent, prob, nil)
+		return
+	}
+
+	response.Write(caRoot)
 }
 
 // Directory is an HTTP request handler that provides the directory
@@ -1705,7 +1727,7 @@ func (wfe *WebFrontEndImpl) Issuer(ctx context.Context, logEvent *web.RequestEve
 	// TODO Content negotiation
 	response.Header().Set("Content-Type", "application/pkix-cert")
 	response.WriteHeader(http.StatusOK)
-	if _, err := response.Write(wfe.IssuerCert); err != nil {
+	if _, err := response.Write(wfe.IssuerCert.Raw); err != nil {
 		wfe.log.Warningf("Could not write response: %s", err)
 	}
 }

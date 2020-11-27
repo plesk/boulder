@@ -1532,17 +1532,16 @@ func (ra *RegistrationAuthorityImpl) recordValidation(ctx context.Context, authI
 func (ra *RegistrationAuthorityImpl) PerformValidation(
 	ctx context.Context,
 	req *rapb.PerformValidationRequest) (*corepb.Authorization, error) {
-	base, err := bgrpc.PBToAuthz(req.Authz)
+	authz, err := bgrpc.PBToAuthz(req.Authz)
 	if err != nil {
 		return nil, err
 	}
 
 	// Refuse to update expired authorizations
-	if base.Expires == nil || base.Expires.Before(ra.clk.Now()) {
+	if authz.Expires == nil || authz.Expires.Before(ra.clk.Now()) {
 		return nil, berrors.MalformedError("expired authorization")
 	}
 
-	authz := base
 	challIndex := int(req.ChallengeIndex)
 	if challIndex >= len(authz.Challenges) {
 		return nil,
@@ -1566,7 +1565,7 @@ func (ra *RegistrationAuthorityImpl) PerformValidation(
 	}
 
 	if authz.Status != core.StatusPending {
-		return nil, berrors.WrongAuthorizationStateError("authorization must be pending")
+		return nil, berrors.MalformedError("authorization must be pending")
 	}
 
 	// Look up the account key for this authorization
@@ -2024,8 +2023,9 @@ func (ra *RegistrationAuthorityImpl) NewOrder(ctx context.Context, req *rapb.New
 		prometheus.Labels{"type": "requested"},
 	).Observe(float64(len(order.Names)))
 
-	// Set the order's expiry to the minimum expiry
-	order.Expires = minExpiry.UnixNano()
+	// Set the order's expiry to the minimum expiry. The db doesn't store
+	// sub-second values, so truncate here.
+	order.Expires = minExpiry.Truncate(time.Second).UnixNano()
 	storedOrder, err := ra.SA.NewOrder(ctx, order)
 	if err != nil {
 		return nil, err
