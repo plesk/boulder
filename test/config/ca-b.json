@@ -24,7 +24,7 @@
     },
     "saService": {
       "serverAddress": "sa.boulder:9095",
-      "timeout": "15s"
+      "timeout": "30s"
     },
     "cfssl": {
       "signing": {
@@ -41,7 +41,7 @@
             "issuer_urls": [
               "http://boulder:4430/acme/issuer-cert"
             ],
-            "ocsp_url": "http://127.0.0.1:4002/",
+            "ocsp_url": "http://letsencrypt-v2.pp.plesk.ru:4002/",
             "crl_url": "http://example.com/crl",
             "policies": [
               {
@@ -79,7 +79,7 @@
             "issuer_urls": [
               "http://127.0.0.1:4000/acme/issuer-cert"
             ],
-            "ocsp_url": "http://127.0.0.1:4002/",
+            "ocsp_url": "http://letsencrypt-v2.pp.plesk.ru:4002/",
             "crl_url": "http://example.com/crl",
             "policies": [
               {

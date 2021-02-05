@@ -9,7 +9,8 @@
     },
     "dnsTries": 3,
     "dnsResolvers": [
-      "8.8.8.8:53"
+      "10.52.1.71:53",
+      "10.52.1.1:53"
     ],
     "issuerDomain": "happy-hacker-ca.invalid",
     "tls": {
@@ -51,7 +52,7 @@
   },
 
   "common": {
-    "dnsTimeout": "1s",
+    "dnsTimeout": "120s",
     "dnsAllowLoopbackAddresses": true
   }
 }

@@ -63,7 +63,7 @@ var features = map[FeatureFlag]bool{
 	CAAAccountURI:            false,
 	EnforceMultiVA:           false,
 	MultiVAFullResults:       false,
-	MandatoryPOSTAsGET:       false,
+	MandatoryPOSTAsGET:       true,
 	AllowV1Registration:      true,
 	V1DisableNewValidations:  false,
 	PrecertificateRevocation: false,

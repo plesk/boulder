@@ -47,7 +47,10 @@ services:
         # forward the query to this IP (running sd-test-srv). We have
         # special logic there that will return multiple IP addresses for
         # service names.
-        dns: 10.77.77.77
+        dns: 
+          - 10.77.77.77
+          - 10.52.1.1
+          - 10.52.1.71
         ports:
           - 4000:4000 # ACME
           - 4001:4001 # ACMEv2
