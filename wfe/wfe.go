@@ -44,6 +44,7 @@ import (
 // measured_http.
 const (
 	directoryPath = "/directory"
+	caRootPath    = "/ca-root"
 	newRegPath    = "/acme/new-reg"
 	regPath       = "/acme/reg/"
 	newAuthzPath  = "/acme/new-authz"
@@ -318,6 +319,7 @@ func (wfe *WebFrontEndImpl) relativeDirectory(request *http.Request, directory m
 func (wfe *WebFrontEndImpl) Handler(stats prometheus.Registerer) http.Handler {
 	m := http.NewServeMux()
 	wfe.HandleFunc(m, directoryPath, wfe.Directory, "GET")
+	wfe.HandleFunc(m, caRootPath, wfe.CARoot, "GET")
 	wfe.HandleFunc(m, newRegPath, wfe.NewRegistration, "POST")
 	wfe.HandleFunc(m, newAuthzPath, wfe.NewAuthorization, "POST")
 	wfe.HandleFunc(m, newCertPath, wfe.NewCertificate, "POST")
@@ -379,6 +381,24 @@ func addRequesterHeader(w http.ResponseWriter, requester int64) {
 	if requester > 0 {
 		w.Header().Set("Boulder-Requester", strconv.FormatInt(requester, 10))
 	}
+}
+
+// CARoot returns Root CA content
+func (wfe *WebFrontEndImpl) CARoot(
+	ctx context.Context,
+	logEvent *web.RequestEvent,
+	response http.ResponseWriter,
+	request *http.Request) {
+	filePath := "/tmp/root-cert-rsa.pem"
+	caRoot, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		prob := probs.ServerInternal(fmt.Sprintf("could not get root ca: %v", err))
+		wfe.sendError(response, logEvent, prob, nil)
+		return
+	}
+
+	response.Write(caRoot)
 }
 
 // Directory is an HTTP request handler that provides the directory
