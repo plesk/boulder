@@ -17,7 +17,7 @@ certificatesPerName:
     ecdsa.le.wtf: 99999
     must-staple.le.wtf: 99999
     atfs.tk: 99999
-    atfm.tk: 99999
+    atfm.tk: 1000000
   registrationOverrides:
     101: 1000
 registrationsPerIP:
