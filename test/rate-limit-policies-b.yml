@@ -16,9 +16,8 @@ certificatesPerName:
     bad-caa-reserved.com: 99999
     ecdsa.le.wtf: 99999
     must-staple.le.wtf: 99999
-    atfs.tk: 99999
     atfm.tk: 9999999
-    atf.plesk.tech: 9999999
+    plesk.tech: 9999999
   registrationOverrides:
     101: 1000
 registrationsPerIP:
@@ -51,4 +50,4 @@ certificatesPerFQDNSet:
     ecdsa.le.wtf: 99990
     must-staple.le.wtf: 99990
     atfm.tk: 9999999
-    atf.plesk.tech: 9999999
+    plesk.tech: 9999999
