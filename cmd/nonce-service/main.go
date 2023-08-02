@@ -102,7 +102,6 @@ func main() {
 
 	scope, logger, oTelShutdown := cmd.StatsAndLogging(c.NonceService.Syslog, c.NonceService.OpenTelemetry, c.NonceService.DebugAddr)
 	defer oTelShutdown(context.Background())
-	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 
 	ns, err := nonce.NewNonceService(scope, c.NonceService.MaxUsed, c.NonceService.NoncePrefix)
@@ -112,7 +111,7 @@ func main() {
 	cmd.FailOnError(err, "tlsConfig config")
 
 	nonceServer := nonce.NewServer(ns)
-	start, err := bgrpc.NewServer(c.NonceService.GRPC).Add(
+	start, err := bgrpc.NewServer(c.NonceService.GRPC, logger).Add(
 		&noncepb.NonceService_ServiceDesc, nonceServer).Build(tlsConfig, scope, cmd.Clock())
 	cmd.FailOnError(err, "Unable to setup nonce service gRPC server")
 

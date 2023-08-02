@@ -125,7 +125,6 @@ func main() {
 
 	scope, logger, oTelShutdown := cmd.StatsAndLogging(c.Syslog, c.OpenTelemetry, c.RA.DebugAddr)
 	defer oTelShutdown(context.Background())
-	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 
 	// Validate PA config and set defaults if needed
@@ -257,7 +256,7 @@ func main() {
 	rai.OCSP = ocspc
 	rai.SA = sac
 
-	start, err := bgrpc.NewServer(c.RA.GRPC).Add(
+	start, err := bgrpc.NewServer(c.RA.GRPC, logger).Add(
 		&rapb.RegistrationAuthority_ServiceDesc, rai).Build(tlsConfig, scope, clk)
 	cmd.FailOnError(err, "Unable to setup RA gRPC server")
 

@@ -16,7 +16,6 @@ import (
 	_ "github.com/letsencrypt/boulder/cmd/boulder-va"
 	_ "github.com/letsencrypt/boulder/cmd/boulder-wfe2"
 	_ "github.com/letsencrypt/boulder/cmd/caa-log-checker"
-	_ "github.com/letsencrypt/boulder/cmd/ceremony"
 	_ "github.com/letsencrypt/boulder/cmd/cert-checker"
 	_ "github.com/letsencrypt/boulder/cmd/contact-auditor"
 	_ "github.com/letsencrypt/boulder/cmd/crl-checker"
@@ -85,6 +84,7 @@ var boulderUsage = fmt.Sprintf(`Usage: %s <subcommand> [flags]
 	core.Command())
 
 func main() {
+	defer cmd.AuditPanic()
 	var command string
 	if core.Command() == "boulder" {
 		// Operator passed the boulder component as a subcommand.

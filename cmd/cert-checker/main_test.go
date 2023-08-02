@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"encoding/asn1"
 	"encoding/pem"
+	"errors"
 	"log"
 	"math/big"
 	mrand "math/rand"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/letsencrypt/boulder/core"
 	"github.com/letsencrypt/boulder/ctpolicy/loglist"
+	"github.com/letsencrypt/boulder/features"
 	"github.com/letsencrypt/boulder/goodkey"
 	"github.com/letsencrypt/boulder/goodkey/sagoodkey"
 	blog "github.com/letsencrypt/boulder/log"
@@ -86,12 +88,12 @@ func BenchmarkCheckCert(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		checker.checkCert(cert, nil)
+		checker.checkCert(context.Background(), cert, nil)
 	}
 }
 
 func TestCheckWildcardCert(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	saCleanup := test.ResetBoulderTestDatabase(t)
 	defer func() {
@@ -130,14 +132,14 @@ func TestCheckWildcardCert(t *testing.T) {
 		Issued:  parsed.NotBefore,
 		DER:     wildcardCertDer,
 	}
-	_, problems := checker.checkCert(cert, nil)
+	_, problems := checker.checkCert(context.Background(), cert, nil)
 	for _, p := range problems {
 		t.Errorf(p)
 	}
 }
 
 func TestCheckCertReturnsDNSNames(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	saCleanup := test.ResetBoulderTestDatabase(t)
 	defer func() {
@@ -163,7 +165,7 @@ func TestCheckCertReturnsDNSNames(t *testing.T) {
 		DER:     block.Bytes,
 	}
 
-	names, problems := checker.checkCert(cert, nil)
+	names, problems := checker.checkCert(context.Background(), cert, nil)
 	if !reflect.DeepEqual(names, []string{"quite_invalid.com", "al--so--wr--ong.com"}) {
 		t.Errorf("didn't get expected DNS names. other problems: %s", strings.Join(problems, "\n"))
 	}
@@ -186,7 +188,7 @@ func (*rsa2048Generator) genKey() (crypto.Signer, error) {
 }
 
 func TestCheckCert(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	saCleanup := test.ResetBoulderTestDatabase(t)
 	defer func() {
@@ -268,7 +270,7 @@ func TestCheckCert(t *testing.T) {
 				Expires: goodExpiry.AddDate(0, 0, 2), // Expiration doesn't match
 			}
 
-			_, problems := checker.checkCert(cert, nil)
+			_, problems := checker.checkCert(context.Background(), cert, nil)
 
 			problemsMap := map[string]int{
 				"Stored digest doesn't match certificate digest":                            1,
@@ -294,7 +296,7 @@ func TestCheckCert(t *testing.T) {
 
 			// Same settings as above, but the stored serial number in the DB is invalid.
 			cert.Serial = "not valid"
-			_, problems = checker.checkCert(cert, nil)
+			_, problems = checker.checkCert(context.Background(), cert, nil)
 			foundInvalidSerialProblem := false
 			for _, p := range problems {
 				if p == "Stored serial is invalid" {
@@ -319,14 +321,14 @@ func TestCheckCert(t *testing.T) {
 			cert.DER = goodCertDer
 			cert.Expires = parsed.NotAfter
 			cert.Issued = parsed.NotBefore
-			_, problems = checker.checkCert(cert, nil)
+			_, problems = checker.checkCert(context.Background(), cert, nil)
 			test.AssertEquals(t, len(problems), 0)
 		})
 	}
 }
 
 func TestGetAndProcessCerts(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	fc := clock.NewFake()
 	fc.Set(fc.Now().Add(time.Hour))
@@ -365,12 +367,12 @@ func TestGetAndProcessCerts(t *testing.T) {
 	}
 
 	batchSize = 2
-	err = checker.getCerts(false)
+	err = checker.getCerts(context.Background(), false)
 	test.AssertNotError(t, err, "Failed to retrieve certificates")
 	test.AssertEquals(t, len(checker.certs), 5)
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	checker.processCerts(wg, false, nil)
+	checker.processCerts(context.Background(), wg, false, nil)
 	test.AssertEquals(t, checker.issuedReport.BadCerts, int64(5))
 	test.AssertEquals(t, len(checker.issuedReport.Entries), 5)
 }
@@ -383,7 +385,7 @@ type mismatchedCountDB struct{}
 // `getCerts` calls `SelectInt` first to determine how many rows there are
 // matching the `getCertsCountQuery` criteria. For this mock we return
 // a non-zero number
-func (db mismatchedCountDB) SelectNullInt(_ string, _ ...interface{}) (sql.NullInt64, error) {
+func (db mismatchedCountDB) SelectNullInt(_ context.Context, _ string, _ ...interface{}) (sql.NullInt64, error) {
 	return sql.NullInt64{
 			Int64: 99999,
 			Valid: true,
@@ -393,11 +395,15 @@ func (db mismatchedCountDB) SelectNullInt(_ string, _ ...interface{}) (sql.NullI
 
 // `getCerts` then calls `Select` to retrieve the Certificate rows. We pull
 // a dastardly switch-a-roo here and return an empty set
-func (db mismatchedCountDB) Select(output interface{}, _ string, _ ...interface{}) ([]interface{}, error) {
+func (db mismatchedCountDB) Select(_ context.Context, output interface{}, _ string, _ ...interface{}) ([]interface{}, error) {
 	// But actually return nothing
 	outputPtr, _ := output.(*[]sa.CertWithID)
 	*outputPtr = []sa.CertWithID{}
 	return nil, nil
+}
+
+func (db mismatchedCountDB) SelectOne(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
+	return errors.New("unimplemented")
 }
 
 /*
@@ -419,13 +425,13 @@ func (db mismatchedCountDB) Select(output interface{}, _ string, _ ...interface{
  * 0: https://github.com/letsencrypt/boulder/issues/2004
  */
 func TestGetCertsEmptyResults(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	checker := newChecker(saDbMap, clock.NewFake(), pa, kp, time.Hour, testValidityDurations, blog.NewMock())
 	checker.dbMap = mismatchedCountDB{}
 
 	batchSize = 3
-	err = checker.getCerts(false)
+	err = checker.getCerts(context.Background(), false)
 	test.AssertNotError(t, err, "Failed to retrieve certificates")
 }
 
@@ -437,7 +443,7 @@ type emptyDB struct {
 
 // SelectNullInt is a method that returns a false sql.NullInt64 struct to
 // mock a null DB response
-func (db emptyDB) SelectNullInt(_ string, _ ...interface{}) (sql.NullInt64, error) {
+func (db emptyDB) SelectNullInt(_ context.Context, _ string, _ ...interface{}) (sql.NullInt64, error) {
 	return sql.NullInt64{Valid: false},
 		nil
 }
@@ -447,12 +453,12 @@ func (db emptyDB) SelectNullInt(_ string, _ ...interface{}) (sql.NullInt64, erro
 // expected if the DB finds no certificates to match the SELECT query and
 // should return an error.
 func TestGetCertsNullResults(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	checker := newChecker(saDbMap, clock.NewFake(), pa, kp, time.Hour, testValidityDurations, blog.NewMock())
 	checker.dbMap = emptyDB{}
 
-	err = checker.getCerts(false)
+	err = checker.getCerts(context.Background(), false)
 	test.AssertError(t, err, "Should have gotten error from empty DB")
 }
 
@@ -521,7 +527,7 @@ func TestIsForbiddenDomain(t *testing.T) {
 }
 
 func TestIgnoredLint(t *testing.T) {
-	saDbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	saDbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	test.AssertNotError(t, err, "Couldn't connect to database")
 	saCleanup := test.ResetBoulderTestDatabase(t)
 	defer func() {
@@ -592,17 +598,58 @@ func TestIgnoredLint(t *testing.T) {
 
 	// Check the certificate with a nil ignore map. This should return the
 	// expected zlint problems.
-	_, problems := checker.checkCert(cert, nil)
+	_, problems := checker.checkCert(context.Background(), cert, nil)
 	sort.Strings(problems)
 	test.AssertDeepEquals(t, problems, expectedProblems)
 
 	// Check the certificate again with an ignore map that excludes the affected
 	// lints. This should return no problems.
-	_, problems = checker.checkCert(cert, map[string]bool{
+	_, problems = checker.checkCert(context.Background(), cert, map[string]bool{
 		"e_sub_cert_aia_does_not_contain_ocsp_url": true,
 		"n_subject_common_name_included":           true,
 		"w_ct_sct_policy_count_unsatisfied":        true,
 		"e_scts_from_same_operator":                true,
 	})
 	test.AssertEquals(t, len(problems), 0)
+}
+
+func TestPrecertCorrespond(t *testing.T) {
+	err := features.Set(map[string]bool{"CertCheckerRequiresCorrespondence": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checker := newChecker(nil, clock.New(), pa, kp, time.Hour, testValidityDurations, blog.NewMock())
+	checker.getPrecert = func(_ context.Context, _ string) ([]byte, error) {
+		return []byte("hello"), nil
+	}
+	testKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	expiry := time.Now().AddDate(0, 0, 1)
+	serial := big.NewInt(1337)
+	rawCert := x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		NotAfter:     expiry,
+		DNSNames:     []string{"example-a.com"},
+		SerialNumber: serial,
+	}
+	certDer, _ := x509.CreateCertificate(rand.Reader, &rawCert, &rawCert, &testKey.PublicKey, testKey)
+	cert := core.Certificate{
+		Serial:  core.SerialToString(serial),
+		Digest:  core.Fingerprint256(certDer),
+		DER:     certDer,
+		Issued:  time.Now(),
+		Expires: expiry,
+	}
+	_, problems := checker.checkCert(context.Background(), cert, nil)
+	if len(problems) == 0 {
+		t.Errorf("expected precert correspondence problem")
+	}
+	// Ensure that at least one of the problems was related to checking correspondence
+	for _, p := range problems {
+		if strings.Contains(p, "checking correspondence for") {
+			return
+		}
+	}
+	t.Fatalf("expected precert correspondence problem, but got: %v", problems)
 }
