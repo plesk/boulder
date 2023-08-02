@@ -50,8 +50,10 @@ func makeClient() (*rocsp.RWClient, clock.Clock) {
 }
 
 func TestGetStartingID(t *testing.T) {
+	ctx := context.Background()
+
 	clk := clock.NewFake()
-	dbMap, err := sa.NewDbMap(vars.DBConnSAFullPerms, sa.DbSettings{})
+	dbMap, err := sa.DBMapForTest(vars.DBConnSAFullPerms)
 	test.AssertNotError(t, err, "failed setting up db client")
 	defer test.ResetBoulderTestDatabase(t)()
 	sa.SetSQLDebug(dbMap, blog.Get())
@@ -60,7 +62,7 @@ func TestGetStartingID(t *testing.T) {
 		Serial:   "1337",
 		NotAfter: clk.Now().Add(12 * time.Hour),
 	}
-	err = dbMap.Insert(&cs)
+	err = dbMap.Insert(ctx, &cs)
 	test.AssertNotError(t, err, "inserting certificate status")
 	firstID := cs.ID
 
@@ -68,7 +70,7 @@ func TestGetStartingID(t *testing.T) {
 		Serial:   "1338",
 		NotAfter: clk.Now().Add(36 * time.Hour),
 	}
-	err = dbMap.Insert(&cs)
+	err = dbMap.Insert(ctx, &cs)
 	test.AssertNotError(t, err, "inserting certificate status")
 	secondID := cs.ID
 	t.Logf("first ID %d, second ID %d", firstID, secondID)
@@ -121,7 +123,7 @@ func (mog mockOCSPGenerator) GenerateOCSP(ctx context.Context, in *capb.Generate
 func TestLoadFromDB(t *testing.T) {
 	redisClient, clk := makeClient()
 
-	dbMap, err := sa.NewDbMap(vars.DBConnSA, sa.DbSettings{})
+	dbMap, err := sa.DBMapForTest(vars.DBConnSA)
 	if err != nil {
 		t.Fatalf("Failed to create dbMap: %s", err)
 	}
@@ -129,7 +131,7 @@ func TestLoadFromDB(t *testing.T) {
 	defer test.ResetBoulderTestDatabase(t)
 
 	for i := 0; i < 100; i++ {
-		err = dbMap.Insert(&core.CertificateStatus{
+		err = dbMap.Insert(context.Background(), &core.CertificateStatus{
 			Serial:          fmt.Sprintf("%036x", i),
 			NotAfter:        clk.Now().Add(200 * time.Hour),
 			OCSPLastUpdated: clk.Now(),

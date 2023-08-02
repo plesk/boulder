@@ -41,7 +41,7 @@ func TestContactAuditor(t *testing.T) {
 	testCtx.addRegistrations(t)
 
 	resChan := make(chan *result, 10)
-	err := testCtx.c.run(resChan)
+	err := testCtx.c.run(context.Background(), resChan)
 	test.AssertNotError(t, err, "received error")
 
 	// We should get back A, B, C, and D
@@ -179,7 +179,7 @@ func setup(t *testing.T) testCtx {
 
 	// Using DBConnSAFullPerms to be able to insert registrations and
 	// certificates
-	dbMap, err := sa.NewDbMap(vars.DBConnSAFullPerms, sa.DbSettings{})
+	dbMap, err := sa.DBMapForTest(vars.DBConnSAFullPerms)
 	if err != nil {
 		t.Fatalf("Couldn't connect to the database: %s", err)
 	}
@@ -196,7 +196,7 @@ func setup(t *testing.T) testCtx {
 		os.Remove(file.Name())
 	}
 
-	db, err := sa.NewDbMap(vars.DBConnSAMailer, sa.DbSettings{})
+	db, err := sa.DBMapForTest(vars.DBConnSAMailer)
 	if err != nil {
 		t.Fatalf("Couldn't connect to the database: %s", err)
 	}

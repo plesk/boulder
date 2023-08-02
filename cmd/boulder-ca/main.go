@@ -173,7 +173,6 @@ func main() {
 
 	scope, logger, oTelShutdown := cmd.StatsAndLogging(c.Syslog, c.OpenTelemetry, c.CA.DebugAddr)
 	defer oTelShutdown(context.Background())
-	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 
 	// These two metrics are created and registered here so they can be shared
@@ -250,7 +249,7 @@ func main() {
 		logger.Infof("Created a reloadable allow list, it was initialized with %d entries", entries)
 	}
 
-	srv := bgrpc.NewServer(c.CA.GRPCCA)
+	srv := bgrpc.NewServer(c.CA.GRPCCA, logger)
 
 	if !c.CA.DisableOCSPService {
 		ocspi, err := ca.NewOCSPImpl(

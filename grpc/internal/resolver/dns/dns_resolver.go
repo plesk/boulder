@@ -24,6 +24,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -87,8 +88,8 @@ func NewDefaultSRVBuilder() resolver.Builder {
 	return &srvBuilder{scheme: "srv"}
 }
 
-// NewSRVBuilder creates a srvBuilder which is used to factory SRV DNS resolvers
-// with a custom grpc.Balancer use by nonce-service clients.
+// NewNonceSRVBuilder creates a srvBuilder which is used to factory SRV DNS
+// resolvers with a custom grpc.Balancer used by nonce-service clients.
 func NewNonceSRVBuilder() resolver.Builder {
 	return &srvBuilder{scheme: noncebalancer.SRVResolverScheme, balancer: noncebalancer.Name}
 }
@@ -228,32 +229,39 @@ func (d *dnsResolver) watcher() {
 
 func (d *dnsResolver) lookupSRV() ([]resolver.Address, error) {
 	var newAddrs []resolver.Address
+	var errs []error
 	for _, n := range d.names {
 		_, srvs, err := d.resolver.LookupSRV(d.ctx, n.service, "tcp", n.domain)
 		if err != nil {
 			err = handleDNSError(err, "SRV") // may become nil
-			return nil, err
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
 		}
 		for _, s := range srvs {
 			backendAddrs, err := d.resolver.LookupHost(d.ctx, s.Target)
 			if err != nil {
 				err = handleDNSError(err, "A") // may become nil
-				if err == nil {
-					// If there are other SRV records, look them up and ignore this
-					// one that does not exist.
+				if err != nil {
+					errs = append(errs, err)
 					continue
 				}
-				return nil, err
 			}
 			for _, a := range backendAddrs {
 				ip, ok := formatIP(a)
 				if !ok {
-					return nil, fmt.Errorf("srv: error parsing A record IP address %v", a)
+					errs = append(errs, fmt.Errorf("srv: error parsing A record IP address %v", a))
+					continue
 				}
 				addr := ip + ":" + strconv.Itoa(int(s.Port))
 				newAddrs = append(newAddrs, resolver.Address{Addr: addr, ServerName: s.Target})
 			}
 		}
+	}
+	// Only return an error if all lookups failed.
+	if len(errs) > 0 && len(newAddrs) == 0 {
+		return nil, errors.Join(errs...)
 	}
 	return newAddrs, nil
 }
@@ -294,7 +302,7 @@ func formatIP(addr string) (addrIP string, ok bool) {
 	return "[" + addr + "]", true
 }
 
-// parseTarget takes the user input target string and parses the service domain
+// parseServiceDomain takes the user input target string and parses the service domain
 // names for SRV lookup. Input is expected to be a hostname containing at least
 // two labels (e.g. "foo.bar", "foo.bar.baz"). The first label is the service
 // name and the rest is the domain name. If the target is not in the expected

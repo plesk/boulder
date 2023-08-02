@@ -40,10 +40,8 @@
 			}
 		},
 		"features": {
-			"CAAValidationMethods": false,
-			"CAAAccountURI": false,
-			"EnforceMultiVA": false,
-			"MultiVAFullResults": false
+			"EnforceMultiVA": true,
+			"MultiVAFullResults": true
 		},
 		"remoteVAs": [
 			{

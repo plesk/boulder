@@ -67,7 +67,6 @@ func main() {
 	}
 	scope, logger, oTelShutdown := cmd.StatsAndLogging(c.Syslog, c.OpenTelemetry, c.Publisher.DebugAddr)
 	defer oTelShutdown(context.Background())
-	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 
 	if c.Publisher.Chains == nil {
@@ -94,7 +93,7 @@ func main() {
 
 	pubi := publisher.New(bundles, c.Publisher.UserAgent, logger, scope)
 
-	start, err := bgrpc.NewServer(c.Publisher.GRPC).Add(
+	start, err := bgrpc.NewServer(c.Publisher.GRPC, logger).Add(
 		&pubpb.Publisher_ServiceDesc, pubi).Build(tlsConfig, scope, clk)
 	cmd.FailOnError(err, "Unable to setup Publisher gRPC server")
 

@@ -84,7 +84,6 @@ func main() {
 
 	scope, logger, oTelShutdown := cmd.StatsAndLogging(c.Syslog, c.OpenTelemetry, c.CRLStorer.DebugAddr)
 	defer oTelShutdown(context.Background())
-	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 	clk := cmd.Clock()
 
@@ -125,7 +124,7 @@ func main() {
 	csi, err := storer.New(issuers, s3client, c.CRLStorer.S3Bucket, scope, logger, clk)
 	cmd.FailOnError(err, "Failed to create CRLStorer impl")
 
-	start, err := bgrpc.NewServer(c.CRLStorer.GRPC).Add(
+	start, err := bgrpc.NewServer(c.CRLStorer.GRPC, logger).Add(
 		&cspb.CRLStorer_ServiceDesc, csi).Build(tlsConfig, scope, clk)
 	cmd.FailOnError(err, "Unable to setup CRLStorer gRPC server")
 

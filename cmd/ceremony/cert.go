@@ -1,4 +1,4 @@
-package notmain
+package main
 
 import (
 	"crypto"
@@ -13,12 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/letsencrypt/boulder/policyasn1"
 )
 
 type policyInfoConfig struct {
-	OID    string
+	OID string
+	// Deprecated: we do not include the id-qt-cps policy qualifier in our
+	// certificate policy extensions anymore.
 	CPSURI string `yaml:"cps-uri"`
 }
 
@@ -55,10 +55,9 @@ type certProfile struct {
 	// certificate
 	IssuerURL string `yaml:"issuer-url"`
 
-	// PolicyOIDs should contain any OIDs to be inserted in a certificate
-	// policies extension. If the CPSURI field of a policyInfoConfig element
-	// is set it will result in a PolicyInformation structure containing a
-	// single id-qt-cps type qualifier indicating the CPS URI.
+	// Policies should contain any OIDs to be inserted in a certificate
+	// policies extension. It should be empty for Root certs, and contain the
+	// BRs "domain-validated" Reserved Policy Identifier for Intermediates.
 	Policies []policyInfoConfig `yaml:"policies"`
 
 	// KeyUsages should contain the set of key usage bits to set
@@ -142,12 +141,21 @@ func (profile *certProfile) verifyProfile(ct certType) error {
 		return errors.New("country is required")
 	}
 
+	if ct == rootCert {
+		if len(profile.Policies) != 0 {
+			return errors.New("policies should not be set on root certs")
+		}
+	}
+
 	if ct == intermediateCert {
 		if profile.CRLURL == "" {
 			return errors.New("crl-url is required for intermediates")
 		}
 		if profile.IssuerURL == "" {
 			return errors.New("issuer-url is required for intermediates")
+		}
+		if len(profile.Policies) != 1 || profile.Policies[0].OID != "2.23.140.1.2.1" {
+			return errors.New("policy should be exactly BRs domain-validated for intermediates")
 		}
 	}
 
@@ -172,6 +180,9 @@ func parseOID(oidStr string) (asn1.ObjectIdentifier, error) {
 		if err != nil {
 			return nil, err
 		}
+		if i <= 0 {
+			return nil, errors.New("OID components must be >= 1")
+		}
 		oid = append(oid, i)
 	}
 	return oid, nil
@@ -183,33 +194,7 @@ var stringToKeyUsage = map[string]x509.KeyUsage{
 	"Cert Sign":         x509.KeyUsageCertSign,
 }
 
-var (
-	oidExtensionCertificatePolicies = asn1.ObjectIdentifier{2, 5, 29, 32}
-
-	oidOCSPNoCheck = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1, 5}
-)
-
-func buildPolicies(policies []policyInfoConfig) (pkix.Extension, error) {
-	policyExt := pkix.Extension{Id: oidExtensionCertificatePolicies}
-	var policyInfo []policyasn1.PolicyInformation
-	for _, p := range policies {
-		oid, err := parseOID(p.OID)
-		if err != nil {
-			return pkix.Extension{}, err
-		}
-		pi := policyasn1.PolicyInformation{Policy: oid}
-		if p.CPSURI != "" {
-			pi.Qualifiers = []policyasn1.PolicyQualifier{{OID: policyasn1.CPSQualifierOID, Value: p.CPSURI}}
-		}
-		policyInfo = append(policyInfo, pi)
-	}
-	v, err := asn1.Marshal(policyInfo)
-	if err != nil {
-		return pkix.Extension{}, err
-	}
-	policyExt.Value = v
-	return policyExt, nil
-}
+var oidOCSPNoCheck = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1, 5}
 
 func generateSKID(pk []byte) ([]byte, error) {
 	var pkixPublicKey struct {
@@ -316,12 +301,12 @@ func makeTemplate(randReader io.Reader, profile *certProfile, pubKey []byte, ct 
 		cert.MaxPathLenZero = true
 	}
 
-	if len(profile.Policies) > 0 {
-		policyExt, err := buildPolicies(profile.Policies)
+	for _, policyConfig := range profile.Policies {
+		oid, err := parseOID(policyConfig.OID)
 		if err != nil {
 			return nil, err
 		}
-		cert.ExtraExtensions = append(cert.ExtraExtensions, policyExt)
+		cert.PolicyIdentifiers = append(cert.PolicyIdentifiers, oid)
 	}
 
 	return cert, nil
@@ -336,7 +321,7 @@ func makeTemplate(randReader io.Reader, profile *certProfile, pubKey []byte, ct 
 type failReader struct{}
 
 func (fr *failReader) Read([]byte) (int, error) {
-	return 0, errors.New("Empty reader used by x509.CreateCertificate")
+	return 0, errors.New("empty reader used by x509.CreateCertificate")
 }
 
 func generateCSR(profile *certProfile, signer crypto.Signer) ([]byte, error) {
