@@ -27,8 +27,7 @@ type Config struct {
 		// before giving up. May be short-circuited by deadlines. A zero value
 		// will be turned into 1.
 		DNSTries                  int
-		DNSResolver               string           `validate:"required_without=DNSProvider,excluded_with=DNSProvider,omitempty,hostname|hostname_port"`
-		DNSProvider               *cmd.DNSProvider `validate:"required_without=DNSResolver,excluded_with=DNSResolver,omitempty"`
+		DNSProvider               *cmd.DNSProvider `validate:"required"`
 		DNSTimeout                config.Duration  `validate:"required"`
 		DNSAllowLoopbackAddresses bool
 
@@ -37,7 +36,7 @@ type Config struct {
 
 		Features map[string]bool
 
-		AccountURIPrefixes []string
+		AccountURIPrefixes []string `validate:"min=1,dive,required,url"`
 	}
 
 	Syslog        cmd.SyslogConfig
@@ -70,7 +69,6 @@ func main() {
 
 	scope, logger, oTelShutdown := cmd.StatsAndLogging(c.Syslog, c.OpenTelemetry, c.VA.DebugAddr)
 	defer oTelShutdown(context.Background())
-	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 
 	if c.VA.DNSTimeout.Duration == 0 {
@@ -82,22 +80,8 @@ func main() {
 	}
 	clk := cmd.Clock()
 
-	// TODO(#6868) Remove this once all instances of VA.DNSResolver have been
-	// removed from production config files.
-	if c.VA.DNSResolver != "" && c.VA.DNSProvider != nil {
-		cmd.Fail("Cannot specify both 'dnsResolver' and dnsProvider")
-	}
-
-	if c.VA.DNSResolver == "" && c.VA.DNSProvider == nil {
-		cmd.Fail("Must specify either 'dnsResolver' or dnsProvider")
-	}
-
-	if c.VA.DNSProvider == nil && c.VA.DNSResolver != "" {
-		c.VA.DNSProvider = &cmd.DNSProvider{
-			SRVLookup: cmd.ServiceDomain{
-				Domain: c.VA.DNSResolver,
-			},
-		}
+	if c.VA.DNSProvider == nil {
+		cmd.Fail("Must specify dnsProvider")
 	}
 
 	var servers bdns.ServerProvider
@@ -155,7 +139,7 @@ func main() {
 		c.VA.AccountURIPrefixes)
 	cmd.FailOnError(err, "Unable to create VA server")
 
-	start, err := bgrpc.NewServer(c.VA.GRPC).Add(
+	start, err := bgrpc.NewServer(c.VA.GRPC, logger).Add(
 		&vapb.VA_ServiceDesc, vai).Add(
 		&vapb.CAA_ServiceDesc, vai).Build(tlsConfig, scope, clk)
 	cmd.FailOnError(err, "Unable to setup VA gRPC server")

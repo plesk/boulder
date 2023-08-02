@@ -1,4 +1,4 @@
-package notmain
+package main
 
 import (
 	"bytes"
@@ -38,6 +38,8 @@ func TestParseOID(t *testing.T) {
 	test.AssertError(t, err, "parseOID accepted an empty OID")
 	_, err = parseOID("a.b.c")
 	test.AssertError(t, err, "parseOID accepted an OID containing non-ints")
+	_, err = parseOID("1.0.2")
+	test.AssertError(t, err, "parseOID accepted an OID containing zero")
 	oid, err := parseOID("1.2.3")
 	test.AssertNotError(t, err, "parseOID failed with a valid OID")
 	test.Assert(t, oid.Equal(asn1.ObjectIdentifier{1, 2, 3}), "parseOID returned incorrect OID")
@@ -97,9 +99,9 @@ func TestMakeTemplate(t *testing.T) {
 	profile.KeyUsages = []string{"Digital Signature", "CRL Sign"}
 	profile.Policies = []policyInfoConfig{{}}
 	_, err = makeTemplate(randReader, profile, pubKey, rootCert)
-	test.AssertError(t, err, "makeTemplate didn't fail with invalid policy OID")
+	test.AssertError(t, err, "makeTemplate didn't fail with invalid (empty) policy OID")
 
-	profile.Policies = []policyInfoConfig{{OID: "1.2.3"}, {OID: "1.2.3.4", CPSURI: "hello"}}
+	profile.Policies = []policyInfoConfig{{OID: "1.2.3"}, {OID: "1.2.3.4"}}
 	profile.CommonName = "common name"
 	profile.Organization = "organization"
 	profile.Country = "country"
@@ -120,7 +122,7 @@ func TestMakeTemplate(t *testing.T) {
 	test.AssertEquals(t, len(cert.IssuingCertificateURL), 1)
 	test.AssertEquals(t, cert.IssuingCertificateURL[0], profile.IssuerURL)
 	test.AssertEquals(t, cert.KeyUsage, x509.KeyUsageDigitalSignature|x509.KeyUsageCRLSign)
-	test.AssertEquals(t, len(cert.ExtraExtensions), 1)
+	test.AssertEquals(t, len(cert.PolicyIdentifiers), 2)
 	test.AssertEquals(t, len(cert.ExtKeyUsage), 0)
 
 	cert, err = makeTemplate(randReader, profile, pubKey, intermediateCert)
@@ -314,6 +316,21 @@ func TestVerifyProfile(t *testing.T) {
 				CommonName:         "d",
 				Organization:       "e",
 				Country:            "f",
+				OCSPURL:            "g",
+				CRLURL:             "h",
+				IssuerURL:          "i",
+			},
+			certType:    intermediateCert,
+			expectedErr: "policy should be exactly BRs domain-validated for intermediates",
+		},
+		{
+			profile: certProfile{
+				NotBefore:          "a",
+				NotAfter:           "b",
+				SignatureAlgorithm: "c",
+				CommonName:         "d",
+				Organization:       "e",
+				Country:            "f",
 			},
 			certType: rootCert,
 		},
@@ -469,8 +486,7 @@ func TestVerifyProfile(t *testing.T) {
 		},
 		{
 			profile: certProfile{
-				Policies: []policyInfoConfig{
-					{OID: "1.2.3"}, {OID: "1.2.3.4", CPSURI: "hello"}},
+				Policies: []policyInfoConfig{{OID: "1.2.3"}},
 			},
 			certType:    requestCert,
 			expectedErr: "policies cannot be set for a CSR",

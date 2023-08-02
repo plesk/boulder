@@ -16,12 +16,11 @@ const (
 	StoreRevokerInfo
 	ROCSPStage6
 	ROCSPStage7
+	StoreLintingCertificateInsteadOfPrecertificate
+	CAAValidationMethods
+	CAAAccountURI
 
 	//   Currently in-use features
-	// Check CAA and respect validationmethods parameter.
-	CAAValidationMethods
-	// Check CAA and respect accounturi parameter.
-	CAAAccountURI
 	// EnforceMultiVA causes the VA to block on remote VA PerformValidation
 	// requests in order to make a valid/invalid decision with the results.
 	EnforceMultiVA
@@ -53,6 +52,12 @@ const (
 	// authorizations.
 	CertCheckerRequiresValidations
 
+	// CertCheckerRequiresCorrespondence enables an extra query for each certificate
+	// checked, to find the linting precertificate in the `precertificates` table.
+	// It then checks that the final certificate "corresponds" to the precertificate
+	// using `precert.Correspond`.
+	CertCheckerRequiresCorrespondence
+
 	// AsyncFinalize enables the RA to return approximately immediately from
 	// requests to finalize orders. This allows us to take longer getting SCTs,
 	// issuing certs, and updating the database; it indirectly reduces the number
@@ -68,33 +73,32 @@ const (
 	// Deprecated, and its inclusion is discouraged but not (yet) prohibited.
 	RequireCommonName
 
-	// StoreLintingCertificateInsteadOfPrecertificate stores a copy of the fake
-	// certificate we use for linting in the `precertificates` table. This
-	// allows us to write something useful to the database before signing
-	// anything with a real issuer certificate, so we can treat it as if it
-	// was issued even if there is a power outage or other error between
-	// signing the precertificate and writing it to the database.
-	StoreLintingCertificateInsteadOfPrecertificate
+	// LeaseCRLShards causes the crl-updater to use the database to control which
+	// instance of crl-updater is responsible for updating each shard. This flag
+	// should only be enabled if the `crlShards` table exists in the database.
+	LeaseCRLShards
 )
 
 // List of features and their default value, protected by fMu
 var features = map[FeatureFlag]bool{
-	unused:                         false,
-	CAAValidationMethods:           false,
-	CAAAccountURI:                  false,
-	EnforceMultiVA:                 false,
-	MultiVAFullResults:             false,
-	StoreRevokerInfo:               false,
-	ECDSAForAll:                    false,
-	ServeRenewalInfo:               false,
-	AllowUnrecognizedFeatures:      false,
-	ROCSPStage6:                    false,
-	ROCSPStage7:                    false,
-	ExpirationMailerUsesJoin:       false,
-	CertCheckerChecksValidations:   false,
-	CertCheckerRequiresValidations: false,
-	AsyncFinalize:                  false,
-	RequireCommonName:              true,
+	unused:                            false,
+	CAAValidationMethods:              false,
+	CAAAccountURI:                     false,
+	EnforceMultiVA:                    false,
+	MultiVAFullResults:                false,
+	StoreRevokerInfo:                  false,
+	ECDSAForAll:                       false,
+	ServeRenewalInfo:                  false,
+	AllowUnrecognizedFeatures:         false,
+	ROCSPStage6:                       false,
+	ROCSPStage7:                       false,
+	ExpirationMailerUsesJoin:          false,
+	CertCheckerChecksValidations:      false,
+	CertCheckerRequiresValidations:    false,
+	CertCheckerRequiresCorrespondence: false,
+	AsyncFinalize:                     false,
+	RequireCommonName:                 true,
+	LeaseCRLShards:                    false,
 
 	StoreLintingCertificateInsteadOfPrecertificate: false,
 }

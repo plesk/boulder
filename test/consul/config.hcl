@@ -1,6 +1,6 @@
 client_addr = "0.0.0.0"
 bind_addr   = "10.55.55.10"
-log_level   = "INFO"
+log_level   = "ERROR"
 // When set, uses a subset of the agent's TLS configuration (key_file,
 // cert_file, ca_file, ca_path, and server_name) to set up the client for HTTP
 // or gRPC health checks. This allows services requiring 2-way TLS to be checked
@@ -233,15 +233,35 @@ services {
   address = "10.77.77.77"
   port    = 9095
   tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
-  check {
-    id              = "sa-a-grpc"
-    name            = "sa-a-grpc"
-    grpc            = "10.77.77.77:9095"
-    grpc_use_tls    = true
-    tls_server_name = "sa.boulder"
-    tls_skip_verify = false
-    interval        = "5s"
-  }
+  checks = [
+    {
+      id              = "sa-a-grpc"
+      name            = "sa-a-grpc"
+      grpc            = "10.77.77.77:9095"
+      grpc_use_tls    = true
+      tls_server_name = "sa.boulder"
+      tls_skip_verify = false
+      interval        = "2s"
+    },
+    {
+      id              = "sa-a-grpc-sa"
+      name            = "sa-a-grpc-sa"
+      grpc            = "10.77.77.77:9095/sa.StorageAuthority"
+      grpc_use_tls    = true
+      tls_server_name = "sa.boulder"
+      tls_skip_verify = false
+      interval        = "2s"
+    },
+    {
+      id              = "sa-a-grpc-saro"
+      name            = "sa-a-grpc-saro"
+      grpc            = "10.77.77.77:9095/sa.StorageAuthorityReadOnly"
+      grpc_use_tls    = true
+      tls_server_name = "sa.boulder"
+      tls_skip_verify = false
+      interval        = "2s"
+    }
+  ]
 }
 
 services {
@@ -250,15 +270,35 @@ services {
   address = "10.88.88.88"
   port    = 9095
   tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
-  check {
-    id              = "sa-b-grpc"
-    name            = "sa-b-grpc"
-    grpc            = "10.88.88.88:9095"
-    grpc_use_tls    = true
-    tls_server_name = "sa.boulder"
-    tls_skip_verify = false
-    interval        = "5s"
-  }
+  checks = [
+    {
+      id              = "sa-b-grpc"
+      name            = "sa-b-grpc"
+      grpc            = "10.88.88.88:9095"
+      grpc_use_tls    = true
+      tls_server_name = "sa.boulder"
+      tls_skip_verify = false
+      interval        = "2s"
+    },
+    {
+      id              = "sa-b-grpc-sa"
+      name            = "sa-b-grpc-sa"
+      grpc            = "10.88.88.88:9095/sa.StorageAuthority"
+      grpc_use_tls    = true
+      tls_server_name = "sa.boulder"
+      tls_skip_verify = false
+      interval        = "2s"
+    },
+    {
+      id              = "sa-b-grpc-saro"
+      name            = "sa-b-grpc-saro"
+      grpc            = "10.88.88.88:9095/sa.StorageAuthorityReadOnly"
+      grpc_use_tls    = true
+      tls_server_name = "sa.boulder"
+      tls_skip_verify = false
+      interval        = "2s"
+    }
+  ]
 }
 
 services {
@@ -307,4 +347,85 @@ services {
   address = "10.88.88.88"
   port    = 9092
   tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+}
+
+//
+// The following services are used for testing the gRPC DNS resolver.
+//
+
+// CaseOne config will have 2 SRV records. The first will have 0 backends, the
+// second will have 1.
+services {
+  id      = "case1a"
+  name    = "case1a"
+  address = "10.77.77.77"
+  port    = 9101
+  tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+  checks = [
+    {
+      id       = "case1a-failing"
+      name     = "case1a-failing"
+      http     = "http://localhost:12345" // invalid url
+      method   = "GET"
+      interval = "2s"
+    }
+  ]
+}
+
+services {
+  id      = "case1b"
+  name    = "case1b"
+  address = "10.88.88.88"
+  port    = 9101
+  tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+}
+
+// CaseTwo config will have 2 SRV records. The first will not be configured in
+// Consul, the second will have 1 backend.
+services {
+  id      = "case2b"
+  name    = "case2b"
+  address = "10.88.88.88"
+  port    = 9101
+  tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+}
+
+// CaseThree config will have 2 SRV records. Neither will be configured in
+// Consul.
+
+
+// CaseFour config will have 2 SRV records. Neither will have backends.
+services {
+  id      = "case4a"
+  name    = "case4a"
+  tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+  address = "10.77.77.77"
+  port    = 9101
+  tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+  checks = [
+    {
+      id       = "case4a-failing"
+      name     = "case4a-failing"
+      http     = "http://localhost:12345" // invalid url
+      method   = "GET"
+      interval = "2s"
+    }
+  ]
+}
+
+services {
+  id      = "case4b"
+  name    = "case4b"
+  address = "10.88.88.88"
+  port    = 9101
+  tags    = ["tcp"] // Required for SRV RR support in gRPC DNS resolution.
+  checks = [
+    {
+      id       = "case4b-failing"
+      name     = "case4b-failing"
+      http     = "http://localhost:12345" // invalid url
+      method   = "GET"
+      interval = "2s"
+    }
+  ]
 }
