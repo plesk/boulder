@@ -1,5 +1,6 @@
 {
 	"ca": {
+		"debugAddr": ":8001",
 		"tls": {
 			"caCertFile": "test/grpc-creds/minica.pem",
 			"certFile": "test/grpc-creds/ca.boulder/cert.pem",
@@ -8,6 +9,7 @@
 		"hostnamePolicyFile": "test/hostname-policy.yaml",
 		"grpcCA": {
 			"maxConnectionAge": "30s",
+			"address": ":9093",
 			"services": {
 				"ca.CertificateAuthority": {
 					"clientNames": [
@@ -32,13 +34,8 @@
 			}
 		},
 		"saService": {
-			"dnsAuthority": "consul.service.consul",
-			"srvLookup": {
-				"service": "sa",
-				"domain": "service.consul"
-			},
+			"serverAddress": "sa.service.consul:9095",
 			"timeout": "15s",
-			"noWaitForReady": true,
 			"hostOverride": "sa.boulder"
 		},
 		"issuance": {
@@ -73,7 +70,7 @@
 					"issuerURL": "http://127.0.0.1:4001/aia/issuer/6605440498369741",
 					"ocspURL": "http://127.0.0.1:4002/",
 					"location": {
-						"configFile": "/hierarchy/intermediate-signing-key-rsa.pkcs11.json",
+						"configFile": "test/test-ca.key-pkcs11.json",
 						"certFile": "/hierarchy/intermediate-cert-rsa-a.pem",
 						"numSessions": 2
 					}
@@ -84,21 +81,19 @@
 					"issuerURL": "http://127.0.0.1:4001/aia/issuer/41127673797486028",
 					"ocspURL": "http://127.0.0.1:4002/",
 					"location": {
-						"configFile": "/hierarchy/intermediate-signing-key-rsa.pkcs11.json",
+						"configFile": "test/test-ca.key-pkcs11.json",
 						"certFile": "/hierarchy/intermediate-cert-rsa-b.pem",
 						"numSessions": 2
 					}
 				}
 			],
 			"ignoredLints": [
-				"n_subject_common_name_included",
-				"w_subject_common_name_included",
-				"w_sub_cert_aia_contains_internal_names"
+				"n_subject_common_name_included"
 			]
 		},
 		"expiry": "7776000s",
 		"backdate": "1h",
-		"serialPrefix": 127,
+		"serialPrefix": 255,
 		"maxNames": 100,
 		"lifespanOCSP": "96h",
 		"lifespanCRL": "216h",
@@ -110,11 +105,9 @@
 		},
 		"ocspLogMaxLength": 4000,
 		"ocspLogPeriod": "500ms",
-		"ctLogListFile": "test/ct-test-srv/log_list.json",
+		"ecdsaAllowListFilename": "test/config/ecdsaAllowList.yml",
 		"features": {
-			"ECDSAForAll": true,
-			"AllowNoCommonName": true,
-			"SHA256SubjectKeyIdentifier": true
+			"ROCSPStage7": true
 		}
 	},
 	"pa": {
@@ -125,11 +118,7 @@
 		}
 	},
 	"syslog": {
-		"stdoutlevel": 4,
-		"sysloglevel": -1
-	},
-	"openTelemetry": {
-		"endpoint": "bjaeger:4317",
-		"sampleratio": 1
+		"stdoutlevel": 3,
+		"sysloglevel": 3
 	}
 }
