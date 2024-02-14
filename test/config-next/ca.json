@@ -112,7 +112,11 @@
 		"ocspLogPeriod": "500ms",
 		"ecdsaAllowListFilename": "test/config/ecdsaAllowList.yml",
 		"features": {
+<<<<<<< HEAD
 			"ROCSPStage7": true
+=======
+			"ECDSAForAll": true
+>>>>>>> 78e4e82ff (Feature cleanup (#7320))
 		}
 	},
 	"pa": {
