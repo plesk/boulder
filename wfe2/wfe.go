@@ -56,6 +56,7 @@ const (
 	newAcctPath   = "/acme/new-acct"
 	acctPath      = "/acme/acct/"
 	caRootPath    = "/ca-root"
+	caEcdsaRootPath    = "/ca-ecdsa-root"
 	// When we moved to authzv2, we used a "-v3" suffix to avoid confusion
 	// regarding ACMEv2.
 	authzPath         = "/acme/authz-v3/"
@@ -435,6 +436,7 @@ func (wfe *WebFrontEndImpl) Handler(stats prometheus.Registerer, oTelHTTPOptions
 	wfe.HandleFunc(m, directoryPath, wfe.Directory, "GET", "POST")
 	wfe.HandleFunc(m, newNoncePath, wfe.Nonce, "GET", "POST")
 	wfe.HandleFunc(m, caRootPath, wfe.CARoot, "GET")
+	wfe.HandleFunc(m, caEcdsaRootPath, wfe.CAEcdsaRoot, "GET")
 	// POST-as-GETable ACME endpoints
 	// TODO(@cpu): After November 1st, 2020 support for "GET" to the following
 	// endpoints will be removed, leaving only POST-as-GET support.
@@ -525,6 +527,24 @@ func (wfe *WebFrontEndImpl) CARoot(
 	}
 
 	response.Write(caRoot)
+}
+
+// CAEcdsaRoot returns ecdsa Root CA content
+func (wfe *WebFrontEndImpl) CAEcdsaRoot(
+	ctx context.Context,
+	logEvent *web.RequestEvent,
+	response http.ResponseWriter,
+	request *http.Request) {
+	filePath := "test/certs/webpki/root-ecdsa.cert.pem"
+	caEcdsaRoot, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		prob := probs.ServerInternal(fmt.Sprintf("could not get ecdsa root ca: %v", err))
+		wfe.sendError(response, logEvent, prob, nil)
+		return
+	}
+
+	response.Write(caEcdsaRoot)
 }
 
 // Directory is an HTTP request handler that provides the directory
