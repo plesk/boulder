@@ -7,13 +7,7 @@ log_level   = "ERROR"
 # Data directory for Consul state storage
 data_dir = "/tmp/consul"
 
-# Run as server in dev/standalone mode
-server = true
-bootstrap_expect = 1
-ui = true
-
 # External DNS servers for recursive queries that Consul cannot resolve
-# Consul будет перенаправлять неизвестные DNS-запросы на эти серверы
 recursors = ["8.8.8.8", "8.8.4.4"]
 
 # DNS configuration
