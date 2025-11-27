@@ -10,7 +10,7 @@
 				"domain": "service.consul"
 			}
 		},
-		"dnsTimeout": "1s",
+		"dnsTimeout": "5s",
 		"issuerDomain": "happy-hacker-ca.invalid",
 		"tls": {
 			"caCertfile": "test/certs/ipki/minica.pem",

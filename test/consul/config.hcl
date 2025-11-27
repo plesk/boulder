@@ -17,7 +17,7 @@ dns_config {
   # Maximum staleness time for cached data
   max_stale = "87600h"
   # Timeout for external DNS recursor queries
-  recursor_timeout = "2s"
+  recursor_timeout = "5s"
 }
 // When set, uses a subset of the agent's TLS configuration (key_file,
 // cert_file, ca_file, ca_path, and server_name) to set up the client for HTTP
