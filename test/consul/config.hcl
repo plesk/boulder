@@ -2,7 +2,7 @@
 
 client_addr = "0.0.0.0"
 bind_addr   = "10.77.77.10"
-log_level   = "ERROR"
+log_level   = "DEBUG"
 
 # Data directory for Consul state storage
 data_dir = "/tmp/consul"
