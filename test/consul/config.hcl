@@ -3,6 +3,23 @@
 client_addr = "0.0.0.0"
 bind_addr   = "10.77.77.10"
 log_level   = "ERROR"
+
+# Data directory for Consul state storage
+data_dir = "/tmp/consul"
+
+# External DNS servers for recursive queries that Consul cannot resolve
+# Consul будет перенаправлять неизвестные DNS-запросы на эти серверы
+recursors = ["8.8.8.8", "8.8.4.4"]
+
+# DNS configuration
+dns_config {
+  # Allow stale reads for better performance
+  allow_stale = true
+  # Maximum staleness time for cached data
+  max_stale = "87600h"
+  # Timeout for external DNS recursor queries
+  recursor_timeout = "2s"
+}
 // When set, uses a subset of the agent's TLS configuration (key_file,
 // cert_file, ca_file, ca_path, and server_name) to set up the client for HTTP
 // or gRPC health checks. This allows services requiring 2-way TLS to be checked
