@@ -136,6 +136,13 @@ services:
         ipv4_address: 10.77.77.10
     command: "consul agent -server -bootstrap-expect=1 -ui -config-format=hcl -config-file=/test/consul/config.hcl"
 
+  bdoh:
+    image: satishweb/doh-server:latest
+    networks:
+      bouldernet:
+        ipv4_address: 10.77.77.11
+    command: ["doh-server", "-upstream", "10.77.77.10:53", "-listen", ":8053"]
+
   bjaeger:
     image: jaegertracing/all-in-one:1.50
     networks:
