@@ -32,7 +32,7 @@
 			}
 		},
 		"features": {
-			"DOH": true
+			"DOH": false
 		},
 		"remoteVAs": [
 			{
