@@ -13,7 +13,7 @@ services:
       # To solve HTTP-01 and TLS-ALPN-01 challenges, change the IP in FAKE_DNS
       # to the IP address where your ACME client's solver is listening. This is
       # pointing at the boulder service's "public" IP, where challtestsrv is.
-      FAKE_DNS: 64.112.117.122
+      # FAKE_DNS: 64.112.117.122
       BOULDER_CONFIG_DIR: test/config
       GOCACHE: /boulder/.gocache/go-build
     volumes:
@@ -130,7 +130,7 @@ services:
   bconsul:
     image: hashicorp/consul:1.19.1
     volumes:
-     - ./test/:/test/:cached
+      - ./test/:/test/:cached
     networks:
       bouldernet:
         ipv4_address: 10.77.77.10
