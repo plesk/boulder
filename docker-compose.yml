@@ -134,7 +134,7 @@ services:
     networks:
       bouldernet:
         ipv4_address: 10.77.77.10
-    command: "consul agent -dev -config-format=hcl -config-file=/test/consul/config.hcl"
+    command: "consul agent -server -bootstrap-expect=1 -ui -config-format=hcl -config-file=/test/consul/config.hcl"
 
   bjaeger:
     image: jaegertracing/all-in-one:1.50

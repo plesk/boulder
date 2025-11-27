@@ -3,13 +3,7 @@
 		"userAgent": "remoteva-c",
 		"debugAddr": ":8213",
 		"dnsTries": 3,
-		"dnsProvider": {
-			"dnsAuthority": "consul.service.consul",
-			"srvLookup": {
-				"service": "dns",
-				"domain": "service.consul"
-			}
-		},
+		"dnsStaticResolvers": ["10.77.77.10:53"],
 		"dnsTimeout": "5s",
 		"issuerDomain": "happy-hacker-ca.invalid",
 		"tls": {

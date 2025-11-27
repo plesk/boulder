@@ -3,7 +3,13 @@
 		"userAgent": "boulder",
 		"debugAddr": ":8004",
 		"dnsTries": 3,
-		"dnsStaticResolvers": ["10.77.77.10:53"],
+		"dnsProvider": {
+			"dnsAuthority": "consul.service.consul",
+			"srvLookup": {
+				"service": "dns",
+				"domain": "service.consul"
+			}
+		},
 		"dnsTimeout": "5s",
 		"issuerDomain": "happy-hacker-ca.invalid",
 		"tls": {
