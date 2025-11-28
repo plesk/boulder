@@ -3,9 +3,14 @@
 		"userAgent": "boulder",
 		"debugAddr": ":8004",
 		"dnsTries": 3,
-		"dnsStaticResolvers": ["10.77.77.11:8053"],
-		"dnsAllowLoopbackAddresses": true,
-		"dnsTimeout": "5s",
+		"dnsProvider": {
+			"dnsAuthority": "consul.service.consul",
+			"srvLookup": {
+				"service": "doh",
+				"domain": "service.consul"
+			}
+		},
+		"dnsTimeout": "1s",
 		"issuerDomain": "happy-hacker-ca.invalid",
 		"tls": {
 			"caCertfile": "test/certs/ipki/minica.pem",
@@ -33,7 +38,7 @@
 			}
 		},
 		"features": {
-			"DOH": false
+			"DOH": true
 		},
 		"remoteVAs": [
 			{
@@ -64,7 +69,7 @@
 		]
 	},
 	"syslog": {
-		"stdoutlevel": 7,
-		"sysloglevel": 7
+		"stdoutlevel": 3,
+		"sysloglevel": 3
 	}
 }

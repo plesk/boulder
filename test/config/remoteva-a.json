@@ -3,9 +3,14 @@
 		"userAgent": "remoteva-a",
 		"debugAddr": ":8211",
 		"dnsTries": 3,
-		"dnsStaticResolvers": ["10.77.77.11:8053"],
-		"dnsAllowLoopbackAddresses": true,
-		"dnsTimeout": "5s",
+		"dnsProvider": {
+			"dnsAuthority": "consul.service.consul",
+			"srvLookup": {
+				"service": "doh",
+				"domain": "service.consul"
+			}
+		},
+		"dnsTimeout": "1s",
 		"issuerDomain": "happy-hacker-ca.invalid",
 		"tls": {
 			"caCertfile": "test/certs/ipki/minica.pem",
@@ -34,7 +39,7 @@
 			}
 		},
 		"features": {
-			"DOH": false
+			"DOH": true
 		},
 		"accountURIPrefixes": [
 			"http://boulder.service.consul:4000/acme/reg/",
