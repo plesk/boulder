@@ -39,6 +39,7 @@ func (s *ChallSrv) cnameAnswers(q dns.Question) []dns.RR {
 
 	// Check for mock CNAME record first
 	if value := s.GetDNSCNAMERecord(q.Name); value != "" {
+		s.log.Printf("CNAME query for %s: using mock data -> %s", q.Name, value)
 		record := &dns.CNAME{
 			Hdr: dns.RR_Header{
 				Name:   q.Name,
@@ -53,10 +54,13 @@ func (s *ChallSrv) cnameAnswers(q dns.Question) []dns.RR {
 
 	// No mock data - check if we should forward to real DNS
 	if s.useRealDNS && s.realDNSForwarder != nil {
+		s.log.Printf("CNAME query for %s: no mock data, forwarding to real DNS", q.Name)
 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
 		if len(realAnswers) > 0 {
+			s.log.Printf("CNAME query for %s: got %d answers from real DNS", q.Name, len(realAnswers))
 			return realAnswers
 		}
+		s.log.Printf("CNAME query for %s: no answers from real DNS", q.Name)
 	}
 
 	return records
@@ -72,6 +76,7 @@ func (s *ChallSrv) txtAnswers(q dns.Question) []dns.RR {
 	values := s.GetDNSOneChallenge(q.Name)
 	if len(values) > 0 {
 		// We have mock challenge data, use it
+		s.log.Printf("TXT query for %s: using mock data (%d records)", q.Name, len(values))
 		for _, resp := range values {
 			record := &dns.TXT{
 				Hdr: dns.RR_Header{
@@ -88,10 +93,13 @@ func (s *ChallSrv) txtAnswers(q dns.Question) []dns.RR {
 
 	// No mock data - check if we should forward to real DNS
 	if s.useRealDNS && s.realDNSForwarder != nil {
+		s.log.Printf("TXT query for %s: no mock data, forwarding to real DNS", q.Name)
 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
 		if len(realAnswers) > 0 {
+			s.log.Printf("TXT query for %s: got %d answers from real DNS", q.Name, len(realAnswers))
 			return realAnswers
 		}
+		s.log.Printf("TXT query for %s: no answers from real DNS", q.Name)
 	}
 
 	return records
@@ -113,6 +121,7 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
 	values := s.GetDNSARecord(q.Name)
 	if len(values) > 0 {
 		// We have mock data, use it
+		s.log.Printf("A query for %s: using mock data (%d records)", q.Name, len(values))
 		for _, resp := range values {
 			ipAddr := net.ParseIP(resp)
 			if ipAddr == nil || ipAddr.To4() == nil {
@@ -134,14 +143,18 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
 
 	// No mock data - check if we should forward to real DNS
 	if s.useRealDNS && s.realDNSForwarder != nil {
+		s.log.Printf("A query for %s: no mock data, forwarding to real DNS", q.Name)
 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
 		if len(realAnswers) > 0 {
+			s.log.Printf("A query for %s: got %d answers from real DNS", q.Name, len(realAnswers))
 			return realAnswers
 		}
+		s.log.Printf("A query for %s: no answers from real DNS", q.Name)
 	}
 
 	// Fall back to default IPv4 if set
 	if defaultIPv4 := s.GetDefaultDNSIPv4(); defaultIPv4 != "" {
+		s.log.Printf("A query for %s: using default IP %s", q.Name, defaultIPv4)
 		values = []string{defaultIPv4}
 		for _, resp := range values {
 			ipAddr := net.ParseIP(resp)
@@ -174,6 +187,7 @@ func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
 	values := s.GetDNSAAAARecord(q.Name)
 	if len(values) > 0 {
 		// We have mock data, use it
+		s.log.Printf("AAAA query for %s: using mock data (%d records)", q.Name, len(values))
 		for _, resp := range values {
 			ipAddr := net.ParseIP(resp)
 			if ipAddr == nil {
@@ -195,14 +209,18 @@ func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
 
 	// No mock data - check if we should forward to real DNS
 	if s.useRealDNS && s.realDNSForwarder != nil {
+		s.log.Printf("AAAA query for %s: no mock data, forwarding to real DNS", q.Name)
 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
 		if len(realAnswers) > 0 {
+			s.log.Printf("AAAA query for %s: got %d answers from real DNS", q.Name, len(realAnswers))
 			return realAnswers
 		}
+		s.log.Printf("AAAA query for %s: no answers from real DNS", q.Name)
 	}
 
 	// Fall back to default IPv6 if set
 	if defaultIPv6 := s.GetDefaultDNSIPv6(); defaultIPv6 != "" {
+		s.log.Printf("AAAA query for %s: using default IP %s", q.Name, defaultIPv6)
 		values = []string{defaultIPv6}
 		for _, resp := range values {
 			ipAddr := net.ParseIP(resp)
@@ -234,6 +252,7 @@ func (s *ChallSrv) caaAnswers(q dns.Question) []dns.RR {
 	values := s.GetDNSCAARecord(q.Name)
 	if len(values) > 0 {
 		// We have mock data, use it
+		s.log.Printf("CAA query for %s: using mock data (%d records)", q.Name, len(values))
 		for _, resp := range values {
 			record := &dns.CAA{
 				Hdr: dns.RR_Header{
@@ -251,10 +270,13 @@ func (s *ChallSrv) caaAnswers(q dns.Question) []dns.RR {
 
 	// No mock data - check if we should forward to real DNS
 	if s.useRealDNS && s.realDNSForwarder != nil {
+		s.log.Printf("CAA query for %s: no mock data, forwarding to real DNS", q.Name)
 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
 		if len(realAnswers) > 0 {
+			s.log.Printf("CAA query for %s: got %d answers from real DNS", q.Name, len(realAnswers))
 			return realAnswers
 		}
+		s.log.Printf("CAA query for %s: no answers from real DNS", q.Name)
 	}
 
 	return records

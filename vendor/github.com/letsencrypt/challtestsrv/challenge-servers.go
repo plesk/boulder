@@ -171,7 +171,7 @@ func New(config Config) (*ChallSrv, error) {
 
 	// Initialize real DNS forwarder if enabled
 	if config.UseRealDNS {
-		challSrv.realDNSForwarder = NewRealDNSForwarder(config.UpstreamDNSServers)
+		challSrv.realDNSForwarder = NewRealDNSForwarder(config.UpstreamDNSServers, challSrv.log)
 		challSrv.log.Printf("Real DNS forwarding enabled with upstream servers: %v", config.UpstreamDNSServers)
 	}
 
