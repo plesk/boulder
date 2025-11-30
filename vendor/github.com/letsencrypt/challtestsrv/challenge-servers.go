@@ -65,6 +65,8 @@ type ChallSrv struct {
 	enableRealDNS bool
 	// upstreamDNSServers contains the list of upstream DNS servers to forward queries to
 	upstreamDNSServers []string
+	// realDNSForwarder handles forwarding DNS queries to upstream servers
+	realDNSForwarder *RealDNSForwarder
 }
 
 // mockDNSData holds mock responses for DNS A, AAAA, and CAA lookups.
@@ -165,6 +167,12 @@ func New(config Config) (*ChallSrv, error) {
 			cnameRecords:    make(map[string]string),
 			servFailRecords: make(map[string]bool),
 		},
+	}
+
+	// Initialize real DNS forwarder if enabled
+	if config.EnableRealDNS && len(config.UpstreamDNSServers) > 0 {
+		challSrv.realDNSForwarder = NewRealDNSForwarder(config.Log, config.UpstreamDNSServers)
+		config.Log.Printf("Real DNS forwarding enabled with upstream servers: %v", config.UpstreamDNSServers)
 	}
 
 	// If there are HTTP-01 addresses configured, create HTTP-01 servers with
