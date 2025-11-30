@@ -1,0 +1,62 @@
+diff --git a/vendor/github.com/letsencrypt/challtestsrv/dns.go b/vendor/github.com/letsencrypt/challtestsrv/dns.go
+index 98be04251..818aa35f6 100644
+--- a/vendor/github.com/letsencrypt/challtestsrv/dns.go
++++ b/vendor/github.com/letsencrypt/challtestsrv/dns.go
+@@ -5,6 +5,7 @@ import (
+ 	"io"
+ 	"net"
+ 	"net/http"
++	"strings"
+ 
+ 	"github.com/miekg/dns"
+ )
+@@ -53,7 +54,8 @@ func (s *ChallSrv) cnameAnswers(q dns.Question) []dns.RR {
+ 	}
+ 
+ 	// No mock data - check if we should forward to real DNS
+-	if s.useRealDNS && s.realDNSForwarder != nil {
++	// Skip forwarding for internal domains like .consul
++	if s.useRealDNS && s.realDNSForwarder != nil && !strings.HasSuffix(strings.ToLower(q.Name), ".consul.") {
+ 		s.log.Printf("CNAME query for %s: no mock data, forwarding to real DNS", q.Name)
+ 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+ 		if len(realAnswers) > 0 {
+@@ -92,7 +94,8 @@ func (s *ChallSrv) txtAnswers(q dns.Question) []dns.RR {
+ 	}
+ 
+ 	// No mock data - check if we should forward to real DNS
+-	if s.useRealDNS && s.realDNSForwarder != nil {
++	// Skip forwarding for internal domains like .consul
++	if s.useRealDNS && s.realDNSForwarder != nil && !strings.HasSuffix(strings.ToLower(q.Name), ".consul.") {
+ 		s.log.Printf("TXT query for %s: no mock data, forwarding to real DNS", q.Name)
+ 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+ 		if len(realAnswers) > 0 {
+@@ -142,7 +145,8 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
+ 	}
+ 
+ 	// No mock data - check if we should forward to real DNS
+-	if s.useRealDNS && s.realDNSForwarder != nil {
++	// Skip forwarding for internal domains like .consul
++	if s.useRealDNS && s.realDNSForwarder != nil && !strings.HasSuffix(strings.ToLower(q.Name), ".consul.") {
+ 		s.log.Printf("A query for %s: no mock data, forwarding to real DNS", q.Name)
+ 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+ 		if len(realAnswers) > 0 {
+@@ -208,7 +212,8 @@ func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
+ 	}
+ 
+ 	// No mock data - check if we should forward to real DNS
+-	if s.useRealDNS && s.realDNSForwarder != nil {
++	// Skip forwarding for internal domains like .consul
++	if s.useRealDNS && s.realDNSForwarder != nil && !strings.HasSuffix(strings.ToLower(q.Name), ".consul.") {
+ 		s.log.Printf("AAAA query for %s: no mock data, forwarding to real DNS", q.Name)
+ 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+ 		if len(realAnswers) > 0 {
+@@ -269,7 +274,8 @@ func (s *ChallSrv) caaAnswers(q dns.Question) []dns.RR {
+ 	}
+ 
+ 	// No mock data - check if we should forward to real DNS
+-	if s.useRealDNS && s.realDNSForwarder != nil {
++	// Skip forwarding for internal domains like .consul
++	if s.useRealDNS && s.realDNSForwarder != nil && !strings.HasSuffix(strings.ToLower(q.Name), ".consul.") {
+ 		s.log.Printf("CAA query for %s: no mock data, forwarding to real DNS", q.Name)
+ 		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+ 		if len(realAnswers) > 0 {
