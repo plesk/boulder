@@ -16,7 +16,7 @@ services:
       FAKE_DNS: 64.112.117.122
       # Set to "true" to forward DNS queries to real upstream DNS servers instead of fake responses
       # When enabled, mock data from tests will still take precedence over real DNS
-      USE_REAL_DNS: "false"
+      USE_REAL_DNS: "true"
       # Comma-separated list of upstream DNS servers to use when USE_REAL_DNS is enabled
       UPSTREAM_DNS_SERVERS: "8.8.8.8:53,1.1.1.1:53"
       BOULDER_CONFIG_DIR: test/config
