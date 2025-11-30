@@ -218,7 +218,7 @@ def start(coverage_dir=None):
 
     # Start the chall-test-srv first so it can be used to resolve DNS for
     # gRPC.
-#     startChallSrv()
+     startChallSrv()
 
     # Processes are in order of dependency: Each process should be started
     # before any services that intend to send it RPCs. On shutdown they will be
