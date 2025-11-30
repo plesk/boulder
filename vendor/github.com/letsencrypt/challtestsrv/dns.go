@@ -88,10 +88,14 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
 	if defaultIPv4 := s.GetDefaultDNSIPv4(); len(values) == 0 && defaultIPv4 != "" {
 		values = []string{defaultIPv4}
 	}
-	// Check if we should use real DNS forwarding (no mock data and no default)
-	if len(values) == 0 {
-		if s.enableRealDNS && len(s.upstreamDNSServers) > 0 {
-			s.log.Printf("[FUTURE DNS FORWARDING] Would forward A query for %s to upstream servers %v", q.Name, s.upstreamDNSServers)
+	// Use real DNS forwarding if no mock data and no default
+	if len(values) == 0 && s.realDNSForwarder != nil {
+		answers, err := s.realDNSForwarder.ForwardQuery(q.Name, dns.TypeA)
+		if err != nil {
+			s.log.Printf("[REAL DNS FORWARDING] Failed to forward A query for %s: %v", q.Name, err)
+		} else if len(answers) > 0 {
+			// Use the answers from real DNS
+			return answers
 		}
 	}
 	for _, resp := range values {
@@ -123,10 +127,14 @@ func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
 	if defaultIPv6 := s.GetDefaultDNSIPv6(); len(values) == 0 && defaultIPv6 != "" {
 		values = []string{defaultIPv6}
 	}
-	// Check if we should use real DNS forwarding (no mock data and no default)
-	if len(values) == 0 {
-		if s.enableRealDNS && len(s.upstreamDNSServers) > 0 {
-			s.log.Printf("[FUTURE DNS FORWARDING] Would forward AAAA query for %s to upstream servers %v", q.Name, s.upstreamDNSServers)
+	// Use real DNS forwarding if no mock data and no default
+	if len(values) == 0 && s.realDNSForwarder != nil {
+		answers, err := s.realDNSForwarder.ForwardQuery(q.Name, dns.TypeAAAA)
+		if err != nil {
+			s.log.Printf("[REAL DNS FORWARDING] Failed to forward AAAA query for %s: %v", q.Name, err)
+		} else if len(answers) > 0 {
+			// Use the answers from real DNS
+			return answers
 		}
 	}
 	for _, resp := range values {
