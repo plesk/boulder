@@ -72,6 +72,10 @@ func main() {
 		"Default IPv4 address for mock DNS responses to A queries")
 	defaultIPv6 := flag.String("defaultIPv6", "::1",
 		"Default IPv6 address for mock DNS responses to AAAA queries")
+	useRealDNS := flag.Bool("use-real-dns", false,
+		"Forward DNS queries to real DNS servers instead of returning fake responses")
+	upstreamDNS := flag.String("upstream-dns", "8.8.8.8:53,1.1.1.1:53",
+		"Comma separated list of upstream DNS servers to use when use-real-dns is enabled")
 
 	flag.Parse()
 
@@ -89,16 +93,20 @@ func main() {
 
 	logger := log.New(os.Stdout, "chall-test-srv - ", log.Ldate|log.Ltime)
 
+	upstreamServers := filterEmpty(strings.Split(*upstreamDNS, ","))
+
 	// Create a new challenge server with the provided config
 	srv, err := challtestsrv.New(challtestsrv.Config{
-		HTTPOneAddrs:    httpOneAddresses,
-		HTTPSOneAddrs:   httpsOneAddresses,
-		DOHAddrs:        dohAddresses,
-		DOHCert:         *dohCert,
-		DOHCertKey:      *dohCertKey,
-		DNSOneAddrs:     dnsOneAddresses,
-		TLSALPNOneAddrs: tlsAlpnOneAddresses,
-		Log:             logger,
+		HTTPOneAddrs:       httpOneAddresses,
+		HTTPSOneAddrs:      httpsOneAddresses,
+		DOHAddrs:           dohAddresses,
+		DOHCert:            *dohCert,
+		DOHCertKey:         *dohCertKey,
+		DNSOneAddrs:        dnsOneAddresses,
+		TLSALPNOneAddrs:    tlsAlpnOneAddresses,
+		Log:                logger,
+		UseRealDNS:         *useRealDNS,
+		UpstreamDNSServers: upstreamServers,
 	})
 	cmd.FailOnError(err, "Unable to construct challenge server")
 
@@ -148,6 +156,9 @@ func main() {
 			logger.Printf("Answering AAAA queries with %s by default",
 				*defaultIPv6)
 		}
+
+		srv.SetDefaultDNSIPv4(*defaultIPv4)
+		srv.SetDefaultDNSIPv6(*defaultIPv6)
 	}
 	if *tlsAlpnOneBind != "" {
 		http.HandleFunc("/add-tlsalpn01", oobSrv.addTLSALPN01)

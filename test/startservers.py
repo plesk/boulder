@@ -276,7 +276,7 @@ def startChallSrv():
     # and TLS-ALPN-01 responses on 443 for another interface. The choice of
     # which is used is controlled by mock DNS data added by the relevant
     # integration tests.
-    challSrvProcess = run([
+    challSrvCmd = [
         './bin/chall-test-srv',
         '--defaultIPv4', os.environ.get("FAKE_DNS"),
         '-defaultIPv6', '',
@@ -287,7 +287,16 @@ def startChallSrv():
         '--management', ':8055',
         '--http01', '64.112.117.122:80',
         '-https01', '64.112.117.122:443',
-        '--tlsalpn01', '64.112.117.134:443'])
+        '--tlsalpn01', '64.112.117.134:443']
+
+    # Add real DNS forwarding flags if enabled
+    if os.environ.get("USE_REAL_DNS", "").lower() in ("true", "1", "yes"):
+        challSrvCmd.extend(['--use-real-dns', 'true'])
+        upstreamDNS = os.environ.get("UPSTREAM_DNS_SERVERS", "8.8.8.8:53,1.1.1.1:53")
+        challSrvCmd.extend(['--upstream-dns', upstreamDNS])
+        print("Real DNS forwarding enabled with upstream servers: %s" % upstreamDNS)
+
+    challSrvProcess = run(challSrvCmd)
     # Wait for the chall-test-srv management port.
     if not waitport(8055, ' '.join(challSrvProcess.args)):
         return False

@@ -60,6 +60,14 @@ type ChallSrv struct {
 	// redirects is a map of paths to URLs. HTTP challenge servers respond to
 	// requests for these paths with a 301 to the corresponding URL.
 	redirects map[string]string
+
+	// realDNSForwarder is used to forward DNS queries to real upstream DNS servers
+	// when useRealDNS is enabled
+	realDNSForwarder *RealDNSForwarder
+
+	// useRealDNS indicates whether DNS queries should be forwarded to real DNS servers
+	// instead of returning mock responses
+	useRealDNS bool
 }
 
 // mockDNSData holds mock responses for DNS A, AAAA, and CAA lookups.
@@ -107,6 +115,12 @@ type Config struct {
 	DOHCert string
 	// DOHCertKey is required if DOHAddrs is nonempty.
 	DOHCertKey string
+
+	// UseRealDNS enables forwarding DNS queries to real upstream DNS servers
+	UseRealDNS bool
+	// UpstreamDNSServers is a list of upstream DNS servers to forward queries to
+	// when UseRealDNS is enabled (e.g., "8.8.8.8:53", "1.1.1.1:53")
+	UpstreamDNSServers []string
 }
 
 // validate checks that a challenge server Config is valid. To be valid it must
@@ -152,6 +166,13 @@ func New(config Config) (*ChallSrv, error) {
 			cnameRecords:    make(map[string]string),
 			servFailRecords: make(map[string]bool),
 		},
+		useRealDNS: config.UseRealDNS,
+	}
+
+	// Initialize real DNS forwarder if enabled
+	if config.UseRealDNS {
+		challSrv.realDNSForwarder = NewRealDNSForwarder(config.UpstreamDNSServers)
+		challSrv.log.Printf("Real DNS forwarding enabled with upstream servers: %v", config.UpstreamDNSServers)
 	}
 
 	// If there are HTTP-01 addresses configured, create HTTP-01 servers with

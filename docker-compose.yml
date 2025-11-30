@@ -13,7 +13,12 @@ services:
       # To solve HTTP-01 and TLS-ALPN-01 challenges, change the IP in FAKE_DNS
       # to the IP address where your ACME client's solver is listening. This is
       # pointing at the boulder service's "public" IP, where challtestsrv is.
-      # FAKE_DNS: 64.112.117.122
+      FAKE_DNS: 64.112.117.122
+      # Set to "true" to forward DNS queries to real upstream DNS servers instead of fake responses
+      # When enabled, mock data from tests will still take precedence over real DNS
+      USE_REAL_DNS: "false"
+      # Comma-separated list of upstream DNS servers to use when USE_REAL_DNS is enabled
+      UPSTREAM_DNS_SERVERS: "8.8.8.8:53,1.1.1.1:53"
       BOULDER_CONFIG_DIR: test/config
       GOCACHE: /boulder/.gocache/go-build
     volumes:

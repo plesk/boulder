@@ -37,6 +37,7 @@ type dnsAnswerFunc func(question dns.Question) []dns.RR
 func (s *ChallSrv) cnameAnswers(q dns.Question) []dns.RR {
 	var records []dns.RR
 
+	// Check for mock CNAME record first
 	if value := s.GetDNSCNAMERecord(q.Name); value != "" {
 		record := &dns.CNAME{
 			Hdr: dns.RR_Header{
@@ -46,8 +47,16 @@ func (s *ChallSrv) cnameAnswers(q dns.Question) []dns.RR {
 			},
 			Target: value,
 		}
-
 		records = append(records, record)
+		return records
+	}
+
+	// No mock data - check if we should forward to real DNS
+	if s.useRealDNS && s.realDNSForwarder != nil {
+		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+		if len(realAnswers) > 0 {
+			return realAnswers
+		}
 	}
 
 	return records
@@ -58,18 +67,33 @@ func (s *ChallSrv) cnameAnswers(q dns.Question) []dns.RR {
 // given hostname in the question no RR's will be returned.
 func (s *ChallSrv) txtAnswers(q dns.Question) []dns.RR {
 	var records []dns.RR
+
+	// Check for DNS-01 challenge mock data first
 	values := s.GetDNSOneChallenge(q.Name)
-	for _, resp := range values {
-		record := &dns.TXT{
-			Hdr: dns.RR_Header{
-				Name:   q.Name,
-				Rrtype: dns.TypeTXT,
-				Class:  dns.ClassINET,
-			},
-			Txt: []string{resp},
+	if len(values) > 0 {
+		// We have mock challenge data, use it
+		for _, resp := range values {
+			record := &dns.TXT{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeTXT,
+					Class:  dns.ClassINET,
+				},
+				Txt: []string{resp},
+			}
+			records = append(records, record)
 		}
-		records = append(records, record)
+		return records
 	}
+
+	// No mock data - check if we should forward to real DNS
+	if s.useRealDNS && s.realDNSForwarder != nil {
+		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+		if len(realAnswers) > 0 {
+			return realAnswers
+		}
+	}
+
 	return records
 }
 
@@ -84,26 +108,58 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
 	if ip := net.ParseIP(q.Name); ip != nil {
 		return records
 	}
+
+	// Check for mock A records first
 	values := s.GetDNSARecord(q.Name)
-	if defaultIPv4 := s.GetDefaultDNSIPv4(); len(values) == 0 && defaultIPv4 != "" {
+	if len(values) > 0 {
+		// We have mock data, use it
+		for _, resp := range values {
+			ipAddr := net.ParseIP(resp)
+			if ipAddr == nil || ipAddr.To4() == nil {
+				// If the mock data isn't a valid IPv4 address, don't use it.
+				continue
+			}
+			record := &dns.A{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+				},
+				A: ipAddr,
+			}
+			records = append(records, record)
+		}
+		return records
+	}
+
+	// No mock data - check if we should forward to real DNS
+	if s.useRealDNS && s.realDNSForwarder != nil {
+		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+		if len(realAnswers) > 0 {
+			return realAnswers
+		}
+	}
+
+	// Fall back to default IPv4 if set
+	if defaultIPv4 := s.GetDefaultDNSIPv4(); defaultIPv4 != "" {
 		values = []string{defaultIPv4}
-	}
-	for _, resp := range values {
-		ipAddr := net.ParseIP(resp)
-		if ipAddr == nil || ipAddr.To4() == nil {
-			// If the mock data isn't a valid IPv4 address, don't use it.
-			continue
+		for _, resp := range values {
+			ipAddr := net.ParseIP(resp)
+			if ipAddr == nil || ipAddr.To4() == nil {
+				continue
+			}
+			record := &dns.A{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+				},
+				A: ipAddr,
+			}
+			records = append(records, record)
 		}
-		record := &dns.A{
-			Hdr: dns.RR_Header{
-				Name:   q.Name,
-				Rrtype: dns.TypeA,
-				Class:  dns.ClassINET,
-			},
-			A: ipAddr,
-		}
-		records = append(records, record)
 	}
+
 	return records
 }
 
@@ -113,26 +169,58 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
 // used for the response.
 func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
 	var records []dns.RR
+
+	// Check for mock AAAA records first
 	values := s.GetDNSAAAARecord(q.Name)
-	if defaultIPv6 := s.GetDefaultDNSIPv6(); len(values) == 0 && defaultIPv6 != "" {
+	if len(values) > 0 {
+		// We have mock data, use it
+		for _, resp := range values {
+			ipAddr := net.ParseIP(resp)
+			if ipAddr == nil {
+				// If the mock data isn't a valid IPv6 address, don't use it.
+				continue
+			}
+			record := &dns.AAAA{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeAAAA,
+					Class:  dns.ClassINET,
+				},
+				AAAA: ipAddr,
+			}
+			records = append(records, record)
+		}
+		return records
+	}
+
+	// No mock data - check if we should forward to real DNS
+	if s.useRealDNS && s.realDNSForwarder != nil {
+		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+		if len(realAnswers) > 0 {
+			return realAnswers
+		}
+	}
+
+	// Fall back to default IPv6 if set
+	if defaultIPv6 := s.GetDefaultDNSIPv6(); defaultIPv6 != "" {
 		values = []string{defaultIPv6}
-	}
-	for _, resp := range values {
-		ipAddr := net.ParseIP(resp)
-		if ipAddr == nil || ipAddr.To4() != nil {
-			// If the mock data isn't a valid IPv6 address, don't use it.
-			continue
+		for _, resp := range values {
+			ipAddr := net.ParseIP(resp)
+			if ipAddr == nil {
+				continue
+			}
+			record := &dns.AAAA{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeAAAA,
+					Class:  dns.ClassINET,
+				},
+				AAAA: ipAddr,
+			}
+			records = append(records, record)
 		}
-		record := &dns.AAAA{
-			Hdr: dns.RR_Header{
-				Name:   q.Name,
-				Rrtype: dns.TypeAAAA,
-				Class:  dns.ClassINET,
-			},
-			AAAA: ipAddr,
-		}
-		records = append(records, record)
 	}
+
 	return records
 }
 
@@ -141,19 +229,34 @@ func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
 // added for the given hostname in the question no RRs will be returned.
 func (s *ChallSrv) caaAnswers(q dns.Question) []dns.RR {
 	var records []dns.RR
+
+	// Check for mock CAA records first
 	values := s.GetDNSCAARecord(q.Name)
-	for _, resp := range values {
-		record := &dns.CAA{
-			Hdr: dns.RR_Header{
-				Name:   q.Name,
-				Rrtype: dns.TypeCAA,
-				Class:  dns.ClassINET,
-			},
-			Tag:   resp.Tag,
-			Value: resp.Value,
+	if len(values) > 0 {
+		// We have mock data, use it
+		for _, resp := range values {
+			record := &dns.CAA{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeCAA,
+					Class:  dns.ClassINET,
+				},
+				Tag:   resp.Tag,
+				Value: resp.Value,
+			}
+			records = append(records, record)
 		}
-		records = append(records, record)
+		return records
 	}
+
+	// No mock data - check if we should forward to real DNS
+	if s.useRealDNS && s.realDNSForwarder != nil {
+		realAnswers := s.realDNSForwarder.ForwardQuery(q)
+		if len(realAnswers) > 0 {
+			return realAnswers
+		}
+	}
+
 	return records
 }
 
