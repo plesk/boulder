@@ -88,6 +88,12 @@ func (s *ChallSrv) aAnswers(q dns.Question) []dns.RR {
 	if defaultIPv4 := s.GetDefaultDNSIPv4(); len(values) == 0 && defaultIPv4 != "" {
 		values = []string{defaultIPv4}
 	}
+	// Check if we should use real DNS forwarding (no mock data and no default)
+	if len(values) == 0 {
+		if s.enableRealDNS && len(s.upstreamDNSServers) > 0 {
+			s.log.Printf("[FUTURE DNS FORWARDING] Would forward A query for %s to upstream servers %v", q.Name, s.upstreamDNSServers)
+		}
+	}
 	for _, resp := range values {
 		ipAddr := net.ParseIP(resp)
 		if ipAddr == nil || ipAddr.To4() == nil {
@@ -116,6 +122,12 @@ func (s *ChallSrv) aaaaAnswers(q dns.Question) []dns.RR {
 	values := s.GetDNSAAAARecord(q.Name)
 	if defaultIPv6 := s.GetDefaultDNSIPv6(); len(values) == 0 && defaultIPv6 != "" {
 		values = []string{defaultIPv6}
+	}
+	// Check if we should use real DNS forwarding (no mock data and no default)
+	if len(values) == 0 {
+		if s.enableRealDNS && len(s.upstreamDNSServers) > 0 {
+			s.log.Printf("[FUTURE DNS FORWARDING] Would forward AAAA query for %s to upstream servers %v", q.Name, s.upstreamDNSServers)
+		}
 	}
 	for _, resp := range values {
 		ipAddr := net.ParseIP(resp)
@@ -212,7 +224,7 @@ func (s *ChallSrv) dnsHandlerInner(w writeMsg, r *dns.Msg, userAgent string) {
 	m.SetReply(r)
 	m.Compress = false
 
-	// For each question, add answers based on the type of question
+	// LogFor each question, add answers based on the type of question
 	for _, q := range r.Question {
 		s.AddRequestEvent(DNSRequestEvent{
 			Question:  q,
