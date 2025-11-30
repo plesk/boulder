@@ -60,6 +60,11 @@ type ChallSrv struct {
 	// redirects is a map of paths to URLs. HTTP challenge servers respond to
 	// requests for these paths with a 301 to the corresponding URL.
 	redirects map[string]string
+
+	// enableRealDNS indicates whether real DNS forwarding is enabled
+	enableRealDNS bool
+	// upstreamDNSServers contains the list of upstream DNS servers to forward queries to
+	upstreamDNSServers []string
 }
 
 // mockDNSData holds mock responses for DNS A, AAAA, and CAA lookups.
@@ -107,6 +112,12 @@ type Config struct {
 	DOHCert string
 	// DOHCertKey is required if DOHAddrs is nonempty.
 	DOHCertKey string
+
+	// EnableRealDNS enables real DNS forwarding for queries without mock data
+	EnableRealDNS bool
+	// UpstreamDNSServers is a list of upstream DNS servers to forward queries to
+	// when EnableRealDNS is true and no mock data exists
+	UpstreamDNSServers []string
 }
 
 // validate checks that a challenge server Config is valid. To be valid it must
@@ -137,12 +148,14 @@ func New(config Config) (*ChallSrv, error) {
 	}
 
 	challSrv := &ChallSrv{
-		log:            config.Log,
-		requestHistory: make(map[string]map[RequestEventType][]RequestEvent),
-		httpOne:        make(map[string]string),
-		dnsOne:         make(map[string][]string),
-		tlsALPNOne:     make(map[string]string),
-		redirects:      make(map[string]string),
+		log:                config.Log,
+		requestHistory:     make(map[string]map[RequestEventType][]RequestEvent),
+		httpOne:            make(map[string]string),
+		dnsOne:             make(map[string][]string),
+		tlsALPNOne:         make(map[string]string),
+		redirects:          make(map[string]string),
+		enableRealDNS:      config.EnableRealDNS,
+		upstreamDNSServers: config.UpstreamDNSServers,
 		dnsMocks: mockDNSData{
 			defaultIPv4:     defaultIPv4,
 			defaultIPv6:     defaultIPv6,
