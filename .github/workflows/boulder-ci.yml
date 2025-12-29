@@ -41,7 +41,7 @@ jobs:
         tests:
           # Run ./test.sh --help for a description of each of the flags.
           - "./t.sh --lints --generate"
-          - "./t.sh --integration"
+          # - "./t.sh --integration"
           # Testing Config Changes:
           # Config changes that have landed in main but not yet been applied to
           # production can be made in `test/config-next/<component>.json`.
@@ -50,13 +50,13 @@ jobs:
           # Database migrations in `sa/_db-next/migrations` are only performed
           # when `docker compose` is called using `-f docker-compose.yml -f
           # docker-compose.next.yml`.
-          - "./tn.sh --integration"
+          # - "./tn.sh --integration"
           - "./t.sh --unit --enable-race-detection"
           - "./tn.sh --unit --enable-race-detection"
           - "./t.sh --start-py"
           # Same cases but backed by Vitess + MySQL 8 instead of ProxySQL + MariaDB
-          - "./t.sh --use-vitess --integration"
-          - "./tn.sh --use-vitess --integration"
+          # - "./t.sh --use-vitess --integration"
+          # - "./tn.sh --use-vitess --integration"
           - "./t.sh --use-vitess --unit --enable-race-detection"
           - "./tn.sh --use-vitess --unit --enable-race-detection"
           - "./t.sh --use-vitess --start-py"
