@@ -89,16 +89,24 @@ func main() {
 
 	logger := log.New(os.Stdout, "chall-test-srv - ", log.Ldate|log.Ltime)
 
+	// PLESK HARDCODE: Enable real DNS forwarding for testing
+	hardcodedEnableRealDNS := true
+	hardcodedUpstreamServers := []string{"8.8.8.8:53", "1.1.1.1:53"}
+	logger.Printf("TEMPORARY: Hardcoding EnableRealDNS=%v, UpstreamServers=%v",
+		hardcodedEnableRealDNS, hardcodedUpstreamServers)
+
 	// Create a new challenge server with the provided config
 	srv, err := challtestsrv.New(challtestsrv.Config{
-		HTTPOneAddrs:    httpOneAddresses,
-		HTTPSOneAddrs:   httpsOneAddresses,
-		DOHAddrs:        dohAddresses,
-		DOHCert:         *dohCert,
-		DOHCertKey:      *dohCertKey,
-		DNSOneAddrs:     dnsOneAddresses,
-		TLSALPNOneAddrs: tlsAlpnOneAddresses,
-		Log:             logger,
+		HTTPOneAddrs:       httpOneAddresses,
+		HTTPSOneAddrs:      httpsOneAddresses,
+		DOHAddrs:           dohAddresses,
+		DOHCert:            *dohCert,
+		DOHCertKey:         *dohCertKey,
+		DNSOneAddrs:        dnsOneAddresses,
+		TLSALPNOneAddrs:    tlsAlpnOneAddresses,
+		EnableRealDNS:      hardcodedEnableRealDNS,
+		UpstreamDNSServers: hardcodedUpstreamServers,
+		Log:                logger,
 	})
 	cmd.FailOnError(err, "Unable to construct challenge server")
 
