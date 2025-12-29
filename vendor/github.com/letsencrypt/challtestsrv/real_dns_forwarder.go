@@ -37,10 +37,6 @@ func (f *RealDNSForwarder) ForwardQuery(hostname string, queryType uint16) ([]dn
 	msg.SetQuestion(dns.Fqdn(hostname), queryType)
 	msg.RecursionDesired = true
 
-	queryTypeName := dns.TypeToString[queryType]
-	f.log.Printf("[REAL DNS FORWARDING] Forwarding %s query for %s to upstream servers %v",
-		queryTypeName, hostname, f.upstreamServers)
-
 	// Try each upstream server until one succeeds
 	var lastErr error
 	for _, server := range f.upstreamServers {
@@ -62,20 +58,14 @@ func (f *RealDNSForwarder) ForwardQuery(hostname string, queryType uint16) ([]dn
 
 		if response == nil || response.Rcode != dns.RcodeSuccess {
 			if response != nil {
-				f.log.Printf("[REAL DNS FORWARDING] Non-success response from %s: %s",
-					server, dns.RcodeToString[response.Rcode])
 				lastErr = fmt.Errorf("DNS server returned: %s", dns.RcodeToString[response.Rcode])
 			} else {
-				f.log.Printf("[REAL DNS FORWARDING] Empty response from %s", server)
 				lastErr = fmt.Errorf("empty response from DNS server")
 			}
 			continue
 		}
 
 		// Success! Return the answer records
-		f.log.Printf("[REAL DNS FORWARDING] Received %d answer(s) for %s %s query from %s",
-			len(response.Answer), hostname, queryTypeName, server)
-
 		return response.Answer, nil
 	}
 

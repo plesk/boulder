@@ -232,7 +232,7 @@ func (s *ChallSrv) dnsHandlerInner(w writeMsg, r *dns.Msg, userAgent string) {
 	m.SetReply(r)
 	m.Compress = false
 
-	// LogFor each question, add answers based on the type of question
+	// For each question, add answers based on the type of question
 	for _, q := range r.Question {
 		s.AddRequestEvent(DNSRequestEvent{
 			Question:  q,

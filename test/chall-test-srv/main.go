@@ -72,11 +72,6 @@ func main() {
 		"Default IPv4 address for mock DNS responses to A queries")
 	defaultIPv6 := flag.String("defaultIPv6", "::1",
 		"Default IPv6 address for mock DNS responses to AAAA queries")
-	// TODO: Uncomment when removing hardcoded values
-	_ = flag.Bool("enableRealDNS", false,
-		"Enable real DNS forwarding for queries without mock data")
-	_ = flag.String("upstreamDNSServers", "",
-		"Comma separated list of upstream DNS servers (e.g. 8.8.8.8:53,1.1.1.1:53)")
 
 	flag.Parse()
 
@@ -94,8 +89,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "chall-test-srv - ", log.Ldate|log.Ltime)
 
-	// TEMPORARY HARDCODE: Enable real DNS forwarding for testing
-	// TODO: Remove hardcoded values after testing
+	// PLESK HARDCODE: Enable real DNS forwarding for testing
 	hardcodedEnableRealDNS := true
 	hardcodedUpstreamServers := []string{"8.8.8.8:53", "1.1.1.1:53"}
 	logger.Printf("TEMPORARY: Hardcoding EnableRealDNS=%v, UpstreamServers=%v",
