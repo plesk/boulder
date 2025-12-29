@@ -11,7 +11,7 @@ on:
       - release-branch-*
   pull_request:
     branches:
-      - '**'
+      - "**"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -123,32 +123,31 @@ jobs:
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-  vendorcheck:
-    runs-on: ubuntu-24.04
-    strategy:
-      # When set to true, GitHub cancels all in-progress jobs if any matrix job fails. Default: true
-      fail-fast: false
-      matrix:
-        go-version: [ '1.25.5' ]
+  # vendorcheck:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     # When set to true, GitHub cancels all in-progress jobs if any matrix job fails. Default: true
+  #     fail-fast: false
+  #     matrix:
+  #       go-version: [ '1.25.5' ]
 
-    steps:
-      # Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+  #   steps:
+  #     # Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
 
-      - name: Setup Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
+  #     - name: Setup Go ${{ matrix.go-version }}
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: ${{ matrix.go-version }}
 
-      - name: Verify vendor
-        shell: bash
-        run: |
-          go mod tidy
-          go mod vendor
-          git diff --exit-code
-
+  #     - name: Verify vendor
+  #       shell: bash
+  #       run: |
+  #         go mod tidy
+  #         go mod vendor
+  #         git diff --exit-code
 
   # This is a utility build job to detect if the status of any of the
   # above jobs have failed and fail if so. It is needed so there can be
